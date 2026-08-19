@@ -483,24 +483,32 @@ export const AdminBranding: React.FC = () => {
               <span className="text-[10px] font-bold uppercase text-gray-400 block mb-2">
                 Header Logo Appearance
               </span>
-              {formData.logoUrl ? (
-                <img
-                  src={formData.logoUrl}
-                  alt="Logo"
-                  referrerPolicy="no-referrer"
-                  className="h-8 max-w-[160px] object-contain"
-                />
-              ) : (
-                <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 sm:gap-2.5">
+                {formData.logoUrl && (
+                  <img
+                    src={formData.logoUrl}
+                    alt="Logo"
+                    referrerPolicy="no-referrer"
+                    className="h-8 max-w-[44px] object-contain"
+                  />
+                )}
+                {formData.websiteName?.toLowerCase() === 'outfit' ? (
                   <div
                     style={{ fontFamily: selectedHeadingFont.cssFamily }}
-                    className="inline-flex items-baseline font-medium select-none uppercase text-xl sm:text-2xl tracking-[0.2em]"
+                    className="inline-flex items-baseline font-semibold select-none uppercase text-xl sm:text-2xl tracking-[0.18em]"
                   >
                     <span className="text-[#111111]">Out</span>
                     <span className="text-[#FACC15]">Fit</span>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <span
+                    style={{ fontFamily: selectedHeadingFont.cssFamily }}
+                    className="font-serif font-semibold select-none uppercase truncate text-xl sm:text-2xl tracking-[0.18em] text-[#111111]"
+                  >
+                    {formData.websiteName || 'Outfit'}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* bKash Checkout Preview */}
