@@ -1,0 +1,112 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "E-commerce product catalog item with pricing, discount, stock, sizes, colors, and images",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "price": { "type": "number" },
+        "originalPrice": { "type": "number" },
+        "discountPercentage": { "type": "number" },
+        "stock": { "type": "number" },
+        "category": { "type": "string", "maxLength": 100 },
+        "images": { "type": "array" },
+        "sizes": { "type": "array" },
+        "colors": { "type": "array" },
+        "featured": { "type": "boolean" },
+        "rating": { "type": "number" },
+        "reviewCount": { "type": "number" },
+        "badge": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name", "price", "stock", "category"]
+    },
+    "HeroSlide": {
+      "title": "HeroSlide",
+      "description": "Storefront full-width hero visual slide banner (exactly 3 slides)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "index": { "type": "number" },
+        "imageUrl": { "type": "string" },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "buttonText": { "type": "string" },
+        "buttonLink": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "index", "imageUrl"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer purchase order with shipping, line items, payment method and bKash details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerName": { "type": "string", "maxLength": 150 },
+        "customerEmail": { "type": "string", "maxLength": 150 },
+        "customerPhone": { "type": "string", "maxLength": 50 },
+        "shippingAddress": { "type": "string", "maxLength": 500 },
+        "city": { "type": "string", "maxLength": 100 },
+        "postalCode": { "type": "string", "maxLength": 50 },
+        "items": { "type": "array" },
+        "subtotal": { "type": "number" },
+        "shippingFee": { "type": "number" },
+        "discount": { "type": "number" },
+        "total": { "type": "number" },
+        "paymentMethod": { "type": "string" },
+        "paymentStatus": { "type": "string" },
+        "bkashTransactionId": { "type": "string", "maxLength": 100 },
+        "status": {
+          "type": "string",
+          "enum": ["Pending", "Accepted", "Processing", "Shipped", "Delivered", "Cancelled"]
+        },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "customerName", "customerPhone", "shippingAddress", "items", "total", "status"]
+    },
+    "BrandingSettings": {
+      "title": "BrandingSettings",
+      "description": "Store branding, logo, favicon, bKash merchant number, and store configuration",
+      "type": "object",
+      "properties": {
+        "websiteName": { "type": "string", "maxLength": 100 },
+        "websiteTitle": { "type": "string", "maxLength": 200 },
+        "websiteDescription": { "type": "string", "maxLength": 1000 },
+        "logoUrl": { "type": "string" },
+        "faviconUrl": { "type": "string" },
+        "currency": { "type": "string", "maxLength": 10 },
+        "contactEmail": { "type": "string", "maxLength": 150 },
+        "contactPhone": { "type": "string", "maxLength": 50 },
+        "bkashNumber": { "type": "string", "maxLength": 50 },
+        "freeShippingThreshold": { "type": "number" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["websiteName", "websiteTitle", "bkashNumber"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Product catalog items with real-time sync"
+    },
+    "/heroSlides/{slideId}": {
+      "schema": "HeroSlide",
+      "description": "3 Hero banner images for homepage"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Customer purchase orders and status tracking"
+    },
+    "/settings/branding": {
+      "schema": "BrandingSettings",
+      "description": "Store branding and bKash payment settings"
+    }
+  }
+}

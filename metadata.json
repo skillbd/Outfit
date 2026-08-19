@@ -1,0 +1,6 @@
+{
+  "name": "Modern E-Commerce Store",
+  "description": "Outfit - Luxury fashion store featuring elegant high-fashion typography, 'Out' in black and 'Fit' in yellow (#FACC15), curated apparel catalog, doorstep return policy, bKash checkout, and admin management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
