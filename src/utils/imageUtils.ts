@@ -16,8 +16,8 @@ export interface ProcessedImage {
  */
 export async function processImageFile(
   file: File,
-  maxDimension: number = 1400,
-  quality: number = 0.85
+  maxDimension: number = 900,
+  quality: number = 0.78
 ): Promise<ProcessedImage> {
   return new Promise((resolve, reject) => {
     // If it's an SVG, read directly as text or data URL without canvas rasterization

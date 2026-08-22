@@ -24,7 +24,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 transition-all shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 sm:h-18 gap-4">
+        <div className="flex items-center justify-between min-h-16 sm:min-h-18 py-2 gap-4">
           
           {/* Left: Mobile Menu Trigger & Brand Logo */}
           <div className="flex items-center gap-4 sm:gap-8">

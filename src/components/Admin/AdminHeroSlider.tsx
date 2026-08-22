@@ -80,10 +80,10 @@ export const AdminHeroSlider: React.FC = () => {
             <span>Storefront Visual Showcase</span>
           </div>
           <h2 className="text-xl font-bold text-gray-900">
-            Hero Slider Images (Exactly 3 Slides)
+            Hero Slider Images (1980px × 1080px)
           </h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            Admin can upload and manage the 3 full-width hero visual banners. Displays clean images only.
+            Recommended Resolution: <span className="font-bold text-gray-800">1980 × 1080 px</span> (16:9 Full HD / Wide aspect ratio). Clean, edge-to-edge luxury banners.
           </p>
         </div>
 
@@ -154,8 +154,8 @@ export const AdminHeroSlider: React.FC = () => {
           {/* Image Upload Dropzone Component */}
           <div>
             <ImageUploadDropzone
-              label={`Banner #${activeSlideIndex + 1} Photo`}
-              description="Supports high-res PNG, JPG, WebP. Drag and drop file directly here or select a curated preset."
+              label={`Banner #${activeSlideIndex + 1} Photo (1980 × 1080 px)`}
+              description="Ideal Size: 1980px × 1080px (PNG, JPG, WebP). Drag and drop high-res banner or pick from presets."
               images={currentEditingSlide.imageUrl ? [currentEditingSlide.imageUrl] : []}
               onChange={handleImageUploadChange}
               multiple={false}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Star, ShoppingBag, Check, ShieldCheck, Truck, RotateCcw, Plus, Minus, Zap, Info } from 'lucide-react';
-import { Product, ProductColor } from '../types';
+import { X, Star, ShoppingBag, Check, ShieldCheck, Truck, RotateCcw, Plus, Minus, Zap, Info, CheckCircle2, Image as ImageIcon } from 'lucide-react';
+import { Product } from '../types';
 import { useStore } from '../context/StoreContext';
 
 interface ProductDetailModalProps {
@@ -13,7 +13,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
   
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string>('');
-  const [selectedColor, setSelectedColor] = useState<ProductColor | undefined>(undefined);
   const [quantity, setQuantity] = useState(1);
   const [addedAnimation, setAddedAnimation] = useState(false);
   const [showReturnPolicy, setShowReturnPolicy] = useState(false);
@@ -22,7 +21,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
     if (product) {
       setActiveImageIndex(0);
       setSelectedSize(product.sizes?.[0] || '');
-      setSelectedColor(product.colors?.[0] || undefined);
       setQuantity(1);
       setAddedAnimation(false);
       setShowReturnPolicy(false);
@@ -35,20 +33,22 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
     ? product.images
     : ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800'];
 
+  const selectedImageUrl = images[activeImageIndex] || images[0];
+
   const hasDiscount = Boolean(product.originalPrice && product.originalPrice > product.price);
   const discountPct = product.discountPercentage || (hasDiscount ? Math.round(((product.originalPrice! - product.price) / product.originalPrice!) * 100) : 0);
   const isOutOfStock = product.stock <= 0;
 
   const handleAddToCart = () => {
     if (isOutOfStock) return;
-    addToCart(product, quantity, selectedSize, selectedColor);
+    addToCart(product, quantity, selectedSize, selectedImageUrl);
     setAddedAnimation(true);
     setTimeout(() => setAddedAnimation(false), 2000);
   };
 
   const handleBuyNow = () => {
     if (isOutOfStock) return;
-    addToCart(product, quantity, selectedSize, selectedColor);
+    addToCart(product, quantity, selectedSize, selectedImageUrl);
     onClose();
     setIsCheckoutOpen(true);
   };
@@ -76,16 +76,23 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-6 sm:p-10">
           
-          {/* Left Column: Image Gallery */}
+          {/* Left Column: Image Gallery & Photo Selection */}
           <div className="flex flex-col gap-3">
             {/* Main Stage Image */}
             <div className="relative aspect-[4/5] w-full overflow-hidden bg-gray-100 rounded-2xl border border-gray-100 shadow-xs">
               <img
-                src={images[activeImageIndex] || images[0]}
+                src={selectedImageUrl}
                 alt={product.name}
                 referrerPolicy="no-referrer"
-                className="h-full w-full object-cover object-center transition-all duration-500"
+                className="h-full w-full object-cover object-center transition-all duration-300"
               />
+              
+              {/* Selected Photo Variant Tag */}
+              <div className="absolute bottom-3 left-3 bg-[#111111]/90 backdrop-blur-xs text-[#FACC15] text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-md shadow-xs flex items-center gap-1.5 border border-yellow-400/20">
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#FACC15]" />
+                <span>Selected Photo: Variant #{activeImageIndex + 1}</span>
+              </div>
+
               {product.badge && (
                 <span className="absolute top-3 left-3 bg-gray-950 text-white text-[10px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-md shadow-sm">
                   {product.badge}
@@ -93,27 +100,45 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
               )}
             </div>
 
-            {/* Thumbnail Strip */}
+            {/* Thumbnail Strip with Photo Click Selector */}
             {images.length > 1 && (
-              <div className="flex items-center gap-2.5 overflow-x-auto pb-1">
-                {images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setActiveImageIndex(idx)}
-                    className={`relative w-16 h-20 shrink-0 rounded-xl border overflow-hidden transition-all cursor-pointer ${
-                      activeImageIndex === idx
-                        ? 'border-blue-600 ring-2 ring-blue-500 ring-offset-1 shadow-xs'
-                        : 'border-gray-200 opacity-70 hover:opacity-100'
-                    }`}
-                  >
-                    <img
-                      src={img}
-                      alt={`Thumbnail ${idx + 1}`}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] text-gray-600 font-medium">
+                  <span className="flex items-center gap-1 font-semibold text-gray-800">
+                    <ImageIcon className="w-3.5 h-3.5 text-[#111111]" />
+                    <span>যে ছবিটি অর্ডার করতে চান ক্লিক করুন:</span>
+                  </span>
+                  <span className="text-gray-400 font-mono text-[10px]">
+                    {activeImageIndex + 1}/{images.length}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2.5 overflow-x-auto pb-1.5 pt-0.5">
+                  {images.map((img, idx) => (
+                    <button
+                      key={idx}
+                      id={`photo-variant-thumb-${idx}`}
+                      onClick={() => setActiveImageIndex(idx)}
+                      className={`relative w-16 h-20 shrink-0 rounded-xl border-2 overflow-hidden transition-all cursor-pointer group ${
+                        activeImageIndex === idx
+                          ? 'border-[#111111] ring-2 ring-[#FACC15] ring-offset-1 shadow-md scale-102'
+                          : 'border-gray-200 opacity-70 hover:opacity-100 hover:border-gray-400'
+                      }`}
+                      title={`Select Photo ${idx + 1}`}
+                    >
+                      <img
+                        src={img}
+                        alt={`Photo ${idx + 1}`}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover"
+                      />
+                      {activeImageIndex === idx && (
+                        <div className="absolute top-1 right-1 bg-[#111111] text-[#FACC15] rounded-full p-0.5 shadow-xs">
+                          <Check className="w-2.5 h-2.5" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -123,7 +148,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
             <div>
               {/* Category & SKU */}
               <div className="flex items-center justify-between text-xs text-gray-400 uppercase tracking-widest font-mono">
-                <span className="font-bold text-blue-600">{product.category}</span>
+                <span className="font-bold text-[#111111]">{product.category}</span>
                 <span>ID: {product.id}</span>
               </div>
 
@@ -164,7 +189,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                     <span className="text-base text-gray-400 line-through">
                       {branding.currency}{product.originalPrice?.toFixed(2)}
                     </span>
-                    <span className="bg-rose-50 text-rose-700 text-xs font-bold px-2 py-0.5 rounded-md border border-rose-100">
+                    <span className="bg-[#FACC15]/20 text-[#111111] border border-[#FACC15] text-xs font-extrabold px-2 py-0.5 rounded-md">
                       SAVE {discountPct}%
                     </span>
                   </>
@@ -192,36 +217,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                 {product.description}
               </p>
 
-              {/* Color Selector */}
-              {product.colors && product.colors.length > 0 && (
-                <div className="mt-4">
-                  <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="font-bold text-gray-800 uppercase tracking-wide text-[10px]">
-                      Color: <span className="font-medium text-gray-600">{selectedColor?.name}</span>
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {product.colors.map((color, cIdx) => (
-                      <button
-                        key={cIdx}
-                        onClick={() => setSelectedColor(color)}
-                        className={`group relative flex items-center justify-center p-0.5 rounded-full transition-all cursor-pointer ${
-                          selectedColor?.name === color.name
-                            ? 'ring-2 ring-blue-600 ring-offset-2 scale-110'
-                            : 'hover:scale-105'
-                        }`}
-                        title={color.name}
-                      >
-                        <span
-                          className="w-5 h-5 rounded-full border border-gray-300 shadow-2xs"
-                          style={{ backgroundColor: color.hex }}
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* Size Selector */}
               {product.sizes && product.sizes.length > 0 && (
                 <div className="mt-4">
@@ -237,7 +232,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                         onClick={() => setSelectedSize(size)}
                         className={`min-w-[40px] px-3 py-1.5 text-xs font-semibold rounded-lg transition-all border cursor-pointer ${
                           selectedSize === size
-                            ? 'bg-gray-950 text-white border-gray-950 shadow-xs'
+                            ? 'bg-[#111111] text-[#FACC15] border-[#111111] shadow-xs'
                             : 'bg-gray-50 text-gray-800 border-gray-200 hover:border-gray-300 hover:bg-gray-100'
                         }`}
                       >
@@ -309,7 +304,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                   id="modal-buy-now-btn"
                   onClick={handleBuyNow}
                   disabled={isOutOfStock}
-                  className="flex-1 py-3 bg-[#111111] hover:bg-black text-white text-xs font-bold tracking-wider uppercase rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
+                  className="flex-1 py-3 bg-[#111111] hover:bg-black text-[#FACC15] text-xs font-bold tracking-wider uppercase rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
                 >
                   Buy Now
                 </button>
@@ -359,7 +354,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
             {/* Header */}
             <div className="bg-gray-950 text-white p-5 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white">
+                <div className="w-8 h-8 rounded-lg bg-[#FACC15] text-[#111111] flex items-center justify-center font-bold">
                   <RotateCcw className="w-4 h-4" />
                 </div>
                 <div>

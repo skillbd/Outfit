@@ -6,13 +6,16 @@ export const INITIAL_BRANDING: BrandingSettings = {
   websiteDescription: 'Discover our curated capsule of architectural apparel, handcrafted modern leather goods, and refined everyday essentials designed for timeless living.',
   logoUrl: '',
   faviconUrl: '',
+  logoHeight: 36,
+  logoTextScale: 100,
+  showLogoText: true,
   currency: '৳',
   contactEmail: 'concierge@outfit.luxury',
   contactPhone: '+880 1342-826145',
   bkashNumber: '01342826145',
   freeShippingThreshold: 2500,
-  fontFamily: 'Cormorant Garamond',
-  bodyFontFamily: 'Plus Jakarta Sans',
+  fontFamily: 'Poppins',
+  bodyFontFamily: 'Poppins',
   updatedAt: new Date().toISOString(),
 };
 

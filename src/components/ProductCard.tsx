@@ -24,9 +24,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
   const handleQuickAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isOutOfStock) return;
-    const selectedColor = product.colors?.[selectedColorIdx] || undefined;
     const selectedSize = product.sizes?.[0] || undefined;
-    addToCart(product, 1, selectedSize, selectedColor);
+    addToCart(product, 1, selectedSize, primaryImage);
     setJustAdded(true);
     setTimeout(() => setJustAdded(false), 1500);
   };
@@ -146,10 +145,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
             )}
           </div>
 
-          {/* Color count or stock badge */}
-          {product.colors && product.colors.length > 1 ? (
-            <span className="text-[10px] text-gray-400 font-medium">
-              {product.colors.length} colors
+          {/* Photo count or stock badge */}
+          {product.images && product.images.length > 1 ? (
+            <span className="text-[10px] text-gray-500 font-medium">
+              {product.images.length} photos
             </span>
           ) : !isOutOfStock ? (
             <span className="text-[10px] text-green-600 font-bold">

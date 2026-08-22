@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, SlidersHorizontal, Eye, Trash2, X, CheckCircle, Package, Copy, Check, Phone, MapPin, CreditCard } from 'lucide-react';
+import { Search, SlidersHorizontal, Eye, Trash2, X, CheckCircle, Package, Copy, Check, Phone, MapPin, CreditCard, Image as ImageIcon, ZoomIn, Download, ExternalLink } from 'lucide-react';
 import { Order, OrderStatus } from '../../types';
 import { useStore } from '../../context/StoreContext';
 
@@ -18,6 +18,7 @@ export const AdminOrders: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [copiedTrxId, setCopiedTrxId] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const filteredOrders = orders.filter((ord) => {
     const matchesStatus = statusFilter === 'All' || ord.status === statusFilter;
@@ -171,14 +172,37 @@ export const AdminOrders: React.FC = () => {
                         </span>
                       </td>
 
-                      {/* Items Preview */}
+                      {/* Items Preview with Photo Thumbnails */}
                       <td className="py-3.5 px-4">
                         <div className="text-[11px] text-gray-700">
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            {ord.items.map((i, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => i.image && setPreviewImage(i.image)}
+                                className="relative group/thumb rounded-md overflow-hidden border border-gray-300 hover:border-blue-600 transition-all cursor-pointer"
+                                title="Click to enlarge photo"
+                              >
+                                <img
+                                  src={i.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100'}
+                                  alt={i.name}
+                                  referrerPolicy="no-referrer"
+                                  className="w-7 h-9 object-cover"
+                                />
+                                {i.quantity > 1 && (
+                                  <span className="absolute bottom-0 right-0 bg-[#111111] text-[#FACC15] text-[8px] font-bold px-1 rounded-tl">
+                                    {i.quantity}x
+                                  </span>
+                                )}
+                              </button>
+                            ))}
+                          </div>
                           <strong>{ord.items.reduce((acc, i) => acc + i.quantity, 0)} items</strong>
                           <div className="space-y-0.5 mt-0.5">
                             {ord.items.map((i, idx) => (
                               <div key={idx} className="text-[10px] text-gray-500 truncate max-w-[200px]">
-                                {i.quantity}x {i.name} {i.selectedSize ? `[${i.selectedSize}]` : ''} {i.selectedColor ? `(${i.selectedColor})` : ''}
+                                {i.quantity}x {i.name} {i.selectedSize ? `[${i.selectedSize}]` : ''}
                               </div>
                             ))}
                           </div>
@@ -423,28 +447,40 @@ export const AdminOrders: React.FC = () => {
 
               {/* Line Items */}
               <div>
-                <h4 className="font-bold text-gray-900 uppercase tracking-wider mb-2 text-[10px]">
-                  Ordered Products ({selectedOrder.items.length})
+                <h4 className="font-bold text-gray-900 uppercase tracking-wider mb-2 text-[10px] flex items-center justify-between">
+                  <span>Ordered Products & Customer Selected Photos ({selectedOrder.items.length})</span>
+                  <span className="text-gray-400 font-normal">Click photo to zoom</span>
                 </h4>
                 <div className="divide-y divide-gray-100 border border-gray-200 rounded-xl overflow-hidden">
                   {selectedOrder.items.map((item, idx) => (
                     <div key={idx} className="p-3 flex items-center justify-between gap-3 bg-white">
                       <div className="flex items-center gap-3">
-                        <img
-                          src={item.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100'}
-                          alt={item.name}
-                          referrerPolicy="no-referrer"
-                          className="w-10 h-12 object-cover bg-gray-100 rounded-md border border-gray-200 shrink-0"
-                        />
+                        <button
+                          type="button"
+                          onClick={() => item.image && setPreviewImage(item.image)}
+                          className="relative group w-14 h-18 rounded-lg overflow-hidden border-2 border-gray-200 hover:border-blue-600 bg-gray-100 shrink-0 transition-all cursor-pointer shadow-xs"
+                          title="Click to view high-res photo"
+                        >
+                          <img
+                            src={item.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300'}
+                            alt={item.name}
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                            <ZoomIn className="w-4 h-4" />
+                          </div>
+                        </button>
                         <div>
                           <span className="font-bold text-gray-900 block text-xs">
                             {item.name}
                           </span>
-                          <span className="text-[10px] text-gray-500">
-                            {item.selectedSize ? `Size: ${item.selectedSize}` : ''}
-                            {item.selectedSize && item.selectedColor ? ' • ' : ''}
-                            {item.selectedColor ? `Color: ${item.selectedColor}` : ''}
+                          <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 inline-block mt-0.5">
+                            Customer Ordered Photo
                           </span>
+                          <div className="text-[10px] text-gray-500 mt-0.5">
+                            {item.selectedSize ? `Size: ${item.selectedSize}` : 'Standard Size'}
+                          </div>
                         </div>
                       </div>
 
@@ -482,6 +518,52 @@ export const AdminOrders: React.FC = () => {
                   <span>{branding.currency}{selectedOrder.total.toFixed(2)}</span>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Image Zoom Modal */}
+      {previewImage && (
+        <div
+          id="admin-image-zoom-modal"
+          className="fixed inset-0 z-60 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div
+            className="relative max-w-2xl w-full bg-white rounded-2xl overflow-hidden shadow-2xl p-4 space-y-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b pb-2">
+              <span className="text-xs font-bold text-gray-800">
+                Customer Selected Order Photo (গ্রাহকের নির্বাচিত ছবি)
+              </span>
+              <button
+                type="button"
+                onClick={() => setPreviewImage(null)}
+                className="p-1 rounded-lg text-gray-500 hover:text-black hover:bg-gray-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="aspect-[4/5] max-h-[70vh] w-full overflow-hidden rounded-xl bg-gray-100 flex items-center justify-center">
+              <img
+                src={previewImage}
+                alt="Selected Variant"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <a
+                href={previewImage}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Open Full Size</span>
+              </a>
             </div>
           </div>
         </div>

@@ -70,7 +70,7 @@ export const CartDrawer: React.FC = () => {
                 >
                   {/* Thumbnail */}
                   <img
-                    src={item.product.images?.[0] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400'}
+                    src={item.selectedImage || item.product.images?.[0] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400'}
                     alt={item.product.name}
                     referrerPolicy="no-referrer"
                     className="w-16 h-20 object-cover object-center bg-gray-100 rounded-xl border border-gray-200 shrink-0"

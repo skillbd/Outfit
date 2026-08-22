@@ -10,6 +10,15 @@ export interface FontOption {
 
 export const AVAILABLE_HEADING_FONTS: FontOption[] = [
   {
+    id: 'Poppins',
+    name: 'Poppins',
+    category: 'Sans-Serif / Modern',
+    cssFamily: '"Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    sampleText: 'OUTFIT PREMIUM MODERN',
+    badge: 'NEW / POPULAR',
+    description: 'Crisp, geometric sans with perfect circular curves and contemporary flair.',
+  },
+  {
     id: 'Cormorant Garamond',
     name: 'Cormorant Garamond',
     category: 'Serif / Luxury',
@@ -97,6 +106,15 @@ export const AVAILABLE_HEADING_FONTS: FontOption[] = [
 
 export const AVAILABLE_BODY_FONTS: FontOption[] = [
   {
+    id: 'Poppins',
+    name: 'Poppins',
+    category: 'Sans-Serif / Modern',
+    cssFamily: '"Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    sampleText: 'Contemporary geometric lines tailored with immaculate precision.',
+    badge: 'POPULAR',
+    description: 'Ultra-modern, highly legible and visually balanced typography for web and mobile.',
+  },
+  {
     id: 'Plus Jakarta Sans',
     name: 'Plus Jakarta Sans',
     category: 'Sans-Serif / Modern',
@@ -148,6 +166,13 @@ export interface TypographyPreset {
 }
 
 export const TYPOGRAPHY_PRESETS: TypographyPreset[] = [
+  {
+    id: 'preset_poppins_modern',
+    name: 'Poppins Modern Luxury',
+    headingFont: 'Poppins',
+    bodyFont: 'Poppins',
+    tagline: 'Clean geometric curves and crisp modern digital clarity',
+  },
   {
     id: 'preset_haute_couture',
     name: 'Haute Couture',

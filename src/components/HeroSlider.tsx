@@ -75,13 +75,13 @@ export const HeroSlider: React.FC<HeroSliderProps> = () => {
     <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-3 sm:pt-6">
       <section
         id="hero-slider-section"
-        className="relative w-full aspect-[16/9] sm:aspect-[21/9] md:aspect-[2.4/1] lg:aspect-[2.7/1] min-h-[220px] sm:min-h-[320px] lg:min-h-[380px] rounded-xl sm:rounded-3xl overflow-hidden bg-stone-900 select-none shadow-md group"
+        className="relative w-full aspect-[1980/1080] rounded-xl sm:rounded-3xl overflow-hidden bg-stone-900 select-none shadow-md group"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        aria-label="Store Hero Banner"
+        aria-label="Store Hero Banner (1980x1080)"
       >
         {/* Full Image Display on Mobile and PC */}
         {slides.map((slide, idx) => {
@@ -93,18 +93,7 @@ export const HeroSlider: React.FC<HeroSliderProps> = () => {
                 isActive ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
               }`}
             >
-              {/* Background ambient fill to ensure complete edge-to-edge luxury styling */}
-              <div className="absolute inset-0 overflow-hidden">
-                <img
-                  src={slide.imageUrl}
-                  alt=""
-                  aria-hidden="true"
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover scale-110 blur-xl opacity-40 brightness-75 select-none"
-                />
-              </div>
-
-              {/* Pristine Full Image - Visible completely without crop on both mobile & desktop */}
+              {/* Pristine Full 1980x1080 Image */}
               <div className="relative z-10 w-full h-full flex items-center justify-center p-0">
                 <img
                   src={slide.imageUrl}
@@ -116,7 +105,7 @@ export const HeroSlider: React.FC<HeroSliderProps> = () => {
                       target.src = INITIAL_HERO_SLIDES[idx]?.imageUrl || '';
                     }
                   }}
-                  className="w-full h-full object-contain md:object-cover object-center select-none"
+                  className="w-full h-full object-cover object-center select-none"
                 />
               </div>
             </div>

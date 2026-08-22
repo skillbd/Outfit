@@ -37,10 +37,11 @@ export interface HeroSlide {
 }
 
 export interface CartItem {
-  id: string; // unique cart item instance ID (e.g. productId-size-color)
+  id: string; // unique cart item instance ID (e.g. productId-size-image)
   product: Product;
   quantity: number;
   selectedSize?: string;
+  selectedImage?: string;
   selectedColor?: ProductColor;
 }
 
@@ -84,6 +85,9 @@ export interface BrandingSettings {
   websiteDescription: string;
   logoUrl?: string;
   faviconUrl?: string;
+  logoHeight?: number; // Logo image height in pixels (e.g. 20 - 120px, default 36)
+  logoTextScale?: number; // Brand typography scale percentage (e.g. 80 - 180%, default 100)
+  showLogoText?: boolean; // Whether to display brand name text alongside uploaded image logo
   currency: string;
   contactEmail: string;
   contactPhone: string;

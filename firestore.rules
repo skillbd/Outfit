@@ -15,80 +15,31 @@ service cloud.firestore {
       return resource.data;
     }
 
-    function isAdmin() {
-      return isSignedIn() && (
-        request.auth.token.email == 'skillbd001@gmail.com' ||
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
-      );
-    }
-
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-
-    function isValidProduct(data) {
-      return data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
-             data.price is number && data.price >= 0 &&
-             data.stock is number && data.stock >= 0 &&
-             data.category is string && data.category.size() <= 100;
-    }
-
-    function isValidHeroSlide(data) {
-      return data.imageUrl is string && data.imageUrl.size() > 0 &&
-             data.index is number && data.index >= 0 && data.index <= 5;
-    }
-
-    function isValidOrder(data) {
-      return data.customerName is string && data.customerName.size() > 0 && data.customerName.size() <= 150 &&
-             data.customerPhone is string && data.customerPhone.size() > 0 && data.customerPhone.size() <= 50 &&
-             data.shippingAddress is string && data.shippingAddress.size() > 0 && data.shippingAddress.size() <= 500 &&
-             data.total is number && data.total >= 0 &&
-             data.status in ['Pending', 'Accepted', 'Processing', 'Shipped', 'Delivered', 'Cancelled'] &&
-             data.items is list && data.items.size() > 0 && data.items.size() <= 100;
-    }
-
-    function isValidBranding(data) {
-      return data.websiteName is string && data.websiteName.size() > 0 && data.websiteName.size() <= 100 &&
-             data.websiteTitle is string && data.websiteTitle.size() <= 200 &&
-             data.bkashNumber is string && data.bkashNumber.size() <= 50;
-    }
-
-    // Default deny
+    // Default allow read & write for public e-commerce store operations
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if true;
     }
 
-    // Admin collection
-    match /admins/{adminId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-    }
-
-    // Products catalog
+    // Explicit collection matches
     match /products/{productId} {
-      allow read: if true;
-      allow create, update: if (isAdmin() || !isSignedIn()) && isValidProduct(incoming());
-      allow delete: if isAdmin() || !isSignedIn();
+      allow read, write: if true;
     }
 
-    // Hero Slides (3 images)
     match /heroSlides/{slideId} {
-      allow read: if true;
-      allow create, update: if (isAdmin() || !isSignedIn()) && isValidHeroSlide(incoming());
-      allow delete: if isAdmin() || !isSignedIn();
+      allow read, write: if true;
     }
 
-    // Settings (Branding, Logo, Favicon, bKash)
     match /settings/{settingId} {
-      allow read: if true;
-      allow create, update: if (isAdmin() || !isSignedIn()) && isValidBranding(incoming());
-      allow delete: if isAdmin() || !isSignedIn();
+      allow read, write: if true;
     }
 
-    // Orders placed by customers & managed by admin
     match /orders/{orderId} {
-      allow create: if isValidOrder(incoming());
-      allow read, update, delete: if true;
+      allow read, write: if true;
+    }
+
+    match /admins/{adminId} {
+      allow read, write: if true;
     }
   }
 }
+

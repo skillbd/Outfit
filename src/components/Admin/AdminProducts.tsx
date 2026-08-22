@@ -117,22 +117,35 @@ export const AdminProducts: React.FC = () => {
 
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingProduct || !editingProduct.name) return;
+    if (!editingProduct || !editingProduct.name.trim()) {
+      alert('Please provide a product title.');
+      return;
+    }
     setIsSaving(true);
     try {
-      let discountPct = editingProduct.discountPercentage;
-      if (editingProduct.originalPrice && editingProduct.originalPrice > editingProduct.price) {
-        discountPct = Math.round(((editingProduct.originalPrice - editingProduct.price) / editingProduct.originalPrice) * 100);
+      const priceNum = parseFloat(String(editingProduct.price)) || 0;
+      const origPriceNum = editingProduct.originalPrice ? parseFloat(String(editingProduct.originalPrice)) : undefined;
+      let discountPct = 0;
+      if (origPriceNum && origPriceNum > priceNum) {
+        discountPct = Math.round(((origPriceNum - priceNum) / origPriceNum) * 100);
       }
+      const stockNum = Math.max(0, parseInt(String(editingProduct.stock), 10) || 0);
+
       await saveProduct({
         ...editingProduct,
+        name: editingProduct.name.trim(),
+        price: priceNum,
+        originalPrice: origPriceNum,
         discountPercentage: discountPct,
+        stock: stockNum,
+        images: editingProduct.images && editingProduct.images.length > 0 ? editingProduct.images : [PRODUCT_PRESET_IMAGES[0]],
       });
+
       setIsModalOpen(false);
       setEditingProduct(null);
     } catch (err) {
       console.error('Save product error:', err);
-      alert('Could not save product.');
+      alert('Could not save product. Please try again.');
     } finally {
       setIsSaving(false);
     }

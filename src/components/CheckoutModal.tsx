@@ -82,7 +82,7 @@ export const CheckoutModal: React.FC = () => {
         name: c.product.name,
         price: c.product.price,
         quantity: c.quantity,
-        image: c.product.images?.[0] || '',
+        image: c.selectedImage || c.product.images?.[0] || '',
         selectedSize: c.selectedSize || '',
         selectedColor: c.selectedColor?.name || '',
       }));
@@ -441,11 +441,19 @@ export const CheckoutModal: React.FC = () => {
                   <span>Price</span>
                 </div>
                 {cart.map((item) => (
-                  <div key={item.id} className="flex justify-between text-gray-600 text-[11px]">
-                    <span className="truncate max-w-[280px]">
-                      {item.quantity}× {item.product.name} {item.selectedSize ? `(${item.selectedSize})` : ''} {item.selectedColor ? `[${item.selectedColor.name}]` : ''}
-                    </span>
-                    <span className="font-mono font-semibold text-gray-900">
+                  <div key={item.id} className="flex items-center justify-between text-gray-600 text-[11px] gap-2">
+                    <div className="flex items-center gap-2 truncate max-w-[280px]">
+                      <img
+                        src={item.selectedImage || item.product.images?.[0] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100'}
+                        alt={item.product.name}
+                        referrerPolicy="no-referrer"
+                        className="w-7 h-9 object-cover rounded border border-gray-200 shrink-0"
+                      />
+                      <span className="truncate">
+                        {item.quantity}× {item.product.name} {item.selectedSize ? `(${item.selectedSize})` : ''}
+                      </span>
+                    </div>
+                    <span className="font-mono font-semibold text-gray-900 shrink-0">
                       {branding.currency}{(item.product.price * item.quantity).toFixed(2)}
                     </span>
                   </div>
