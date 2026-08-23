@@ -1,6 +1,6 @@
 /**
  * Utility for handling image uploads, resizing, and client-side compression
- * to keep payloads compact and lightning fast.
+ * to keep payloads compact, ultra-fast, and compatible with Firestore / localStorage limits.
  */
 
 export interface ProcessedImage {
@@ -12,15 +12,15 @@ export interface ProcessedImage {
 }
 
 /**
- * Compresses an image file to a WebP or JPEG DataURL with maximum dimensions and quality control.
+ * Compresses an image file to a lightweight WebP or JPEG DataURL with responsive max dimensions.
  */
 export async function processImageFile(
   file: File,
-  maxDimension: number = 900,
-  quality: number = 0.78
+  maxDimension: number = 850,
+  quality: number = 0.72
 ): Promise<ProcessedImage> {
   return new Promise((resolve, reject) => {
-    // If it's an SVG, read directly as text or data URL without canvas rasterization
+    // If it's an SVG, read directly as text or data URL
     if (file.type === 'image/svg+xml') {
       const reader = new FileReader();
       reader.onload = () => {
@@ -67,17 +67,46 @@ export async function processImageFile(
           return;
         }
 
-        // Draw image onto canvas
+        // Draw image smoothly onto canvas
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Try WebP first, fallback to JPEG
-        let mimeType = 'image/webp';
-        let compressedDataUrl = canvas.toDataURL(mimeType, quality);
+        // Try WebP first for max compression efficiency
+        let compressedDataUrl = '';
+        try {
+          compressedDataUrl = canvas.toDataURL('image/webp', quality);
+        } catch {
+          compressedDataUrl = '';
+        }
 
-        // If WebP is not smaller or not supported, use jpeg
-        if (!compressedDataUrl.startsWith('data:image/webp')) {
-          mimeType = 'image/jpeg';
-          compressedDataUrl = canvas.toDataURL(mimeType, quality);
+        // If WebP is not supported or failed, fallback to JPEG
+        if (!compressedDataUrl || !compressedDataUrl.startsWith('data:image/webp')) {
+          compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        }
+
+        // If size is still unusually large (> 90KB), re-compress adaptively
+        const approximateSize = Math.round((compressedDataUrl.length * 3) / 4);
+        if (approximateSize > 90 * 1024 && width > 600) {
+          const smallWidth = Math.round(width * 0.75);
+          const smallHeight = Math.round(height * 0.75);
+          const smallCanvas = document.createElement('canvas');
+          smallCanvas.width = smallWidth;
+          smallCanvas.height = smallHeight;
+          const sCtx = smallCanvas.getContext('2d');
+          if (sCtx) {
+            sCtx.imageSmoothingEnabled = true;
+            sCtx.imageSmoothingQuality = 'medium';
+            sCtx.drawImage(img, 0, 0, smallWidth, smallHeight);
+            try {
+              const secondPass = smallCanvas.toDataURL('image/webp', 0.68);
+              if (secondPass.startsWith('data:image/webp') && secondPass.length < compressedDataUrl.length) {
+                compressedDataUrl = secondPass;
+              }
+            } catch {
+              // keep previous
+            }
+          }
         }
 
         resolve({
@@ -90,7 +119,6 @@ export async function processImageFile(
       };
 
       img.onerror = () => {
-        // Fallback to original read if canvas decode fails
         resolve({
           dataUrl: e.target?.result as string,
           name: file.name,
@@ -107,12 +135,12 @@ export async function processImageFile(
 }
 
 /**
- * Process multiple files concurrently
+ * Process multiple files concurrently with optimal sizing
  */
 export async function processMultipleImageFiles(
   files: FileList | File[],
-  maxDimension: number = 1400,
-  quality: number = 0.85
+  maxDimension: number = 850,
+  quality: number = 0.72
 ): Promise<ProcessedImage[]> {
   const fileArray = Array.from(files);
   const imageFiles = fileArray.filter((f) => f.type.startsWith('image/'));
@@ -123,3 +151,4 @@ export async function processMultipleImageFiles(
 
   return results;
 }
+

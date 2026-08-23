@@ -6,7 +6,14 @@ import {
   signInWithEmailAndPassword,
   signOut as fbSignOut,
 } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import {
+  getFirestore,
+  initializeFirestore,
+  memoryLocalCache,
+  doc,
+  getDocFromServer,
+  Firestore,
+} from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import defaultConfig from '../../firebase-applet-config.json';
 
@@ -21,11 +28,25 @@ const firebaseConfig = {
 };
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+
+// Initialize Firestore with memory cache to prevent IndexedDB tab-closing / hidden document abort errors
+let dbInstance: Firestore;
+try {
+  dbInstance = initializeFirestore(
+    app,
+    {
+      localCache: memoryLocalCache(),
+    },
+    firebaseConfig.firestoreDatabaseId
+  );
+} catch {
+  dbInstance = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+}
+
+export const db = dbInstance;
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
-
 
 export { signInWithEmailAndPassword, signInWithPopup, fbSignOut };
 
@@ -80,12 +101,13 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 export async function testFirestoreConnection() {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof Error && error.message.includes('the client is offline')) {
       console.warn('Firestore is running in offline or cached mode:', error.message);
     }
   }
 }
 
-// Test connection on startup
-testFirestoreConnection();
+// Test connection on startup safely
+testFirestoreConnection().catch(() => {});
+

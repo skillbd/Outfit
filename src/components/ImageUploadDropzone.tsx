@@ -16,17 +16,18 @@ interface ImageUploadDropzoneProps {
 
 export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
   label = 'Upload Image',
-  description = 'Supports PNG, JPG, WebP or SVG up to 10MB (automatically optimized)',
+  description = 'Supports PNG, JPG, WebP or SVG (সর্বোচ্চ ২০টি ছবি আপলোড করতে পারবেন)',
   images,
   onChange,
   multiple = false,
-  maxFiles = 10,
+  maxFiles = 20,
   presets = [],
   aspectRatio = 'square',
   compact = false,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadCount, setUploadCount] = useState(0);
   const [urlInput, setUrlInput] = useState('');
   const [activeTab, setActiveTab] = useState<'upload' | 'url' | 'presets'>('upload');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -52,12 +53,14 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
   const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     await handleFiles(e.target.files);
-    // Reset file input value
+    // Reset file input value so selecting identical file again triggers change
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleFiles = async (files: FileList | File[]) => {
     setIsUploading(true);
+    const count = files.length;
+    setUploadCount(count);
     try {
       if (multiple) {
         const processed = await processMultipleImageFiles(files);
@@ -76,6 +79,7 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
       alert('Could not process the selected image file.');
     } finally {
       setIsUploading(false);
+      setUploadCount(0);
     }
   };
 
@@ -185,7 +189,7 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`border-2 border-dashed rounded-xl p-4 sm:p-6 text-center cursor-pointer transition-all duration-200 ${
+          className={`border-2 border-dashed rounded-xl p-4 sm:p-5 text-center cursor-pointer transition-all duration-200 ${
             isDragging
               ? 'border-blue-500 bg-blue-50/50 scale-[0.99]'
               : 'border-gray-300 hover:border-blue-400 bg-gray-50/50 hover:bg-gray-50'
@@ -201,12 +205,14 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
             </div>
             <div>
               <p className="text-xs font-bold text-gray-800">
-                {isUploading ? 'Optimizing & uploading...' : 'Click to browse or drag & drop'}
+                {isUploading
+                  ? `Optimizing & uploading ${uploadCount > 0 ? uploadCount : ''} photos...`
+                  : 'Click to browse multiple photos or drag & drop'}
               </p>
-              <p className="text-[10px] text-gray-400 mt-0.5">
+              <p className="text-[10px] text-gray-500 mt-0.5 font-medium">
                 {multiple
-                  ? `Select one or multiple photos (up to ${maxFiles} images)`
-                  : 'Upload single image (high quality WebP auto-compressed)'}
+                  ? `একসাথে একাধিক (৪, ৫, ১০+ ছবি) সিলেক্ট করুন (সর্বোচ্চ ${maxFiles}টি ছবি)`
+                  : 'Upload single image (high quality auto-compressed)'}
               </p>
             </div>
           </div>
@@ -270,8 +276,13 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
       {images.length > 0 && (
         <div className="pt-2">
           <div className="flex items-center justify-between text-[11px] font-bold text-gray-700 mb-2">
-            <span>
-              {multiple ? `Attached Images (${images.length} / ${maxFiles})` : 'Current Image Preview'}
+            <span className="flex items-center gap-1.5">
+              <span>{multiple ? `Attached Images (${images.length} / ${maxFiles})` : 'Current Image Preview'}</span>
+              {multiple && images.length >= 3 && (
+                <span className="bg-emerald-100 text-emerald-800 text-[9px] px-1.5 py-0.2 rounded-full font-semibold">
+                  Multi-photos active
+                </span>
+              )}
             </span>
             {images.length > 1 && multiple && (
               <span className="text-[10px] text-gray-400 font-normal">
@@ -339,9 +350,25 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
                 </div>
               </div>
             ))}
+
+            {/* Inline '+ Add More' Button for Quick Additional Photos */}
+            {multiple && images.length < maxFiles && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="aspect-square rounded-xl border-2 border-dashed border-gray-300 hover:border-blue-500 bg-gray-50/70 hover:bg-blue-50/50 flex flex-col items-center justify-center gap-1 text-gray-500 hover:text-blue-600 transition-all cursor-pointer group"
+                title="Add more photos"
+              >
+                <div className="p-1.5 rounded-full bg-white shadow-2xs group-hover:scale-110 transition-transform">
+                  <Plus className="w-4 h-4" />
+                </div>
+                <span className="text-[10px] font-bold">+ Add More</span>
+              </button>
+            )}
           </div>
         </div>
       )}
     </div>
   );
 };
+

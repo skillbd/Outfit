@@ -471,12 +471,12 @@ export const AdminProducts: React.FC = () => {
               {/* Multiple Images Upload Dropzone Component */}
               <div className="pt-3 border-t border-gray-100">
                 <ImageUploadDropzone
-                  label="Product Images Gallery (Multiple Upload)"
-                  description="Upload photos directly from your device, paste URLs, or choose curated presets. Drag and drop supported."
+                  label="Product Images Gallery (Multiple Upload / একাধিক ছবি)"
+                  description="Upload photos directly from your device (৩টির বেশি বা সর্বোচ্চ ২০টি ছবি), paste URLs, or choose curated presets."
                   images={editingProduct.images || []}
                   onChange={handleProductImagesChange}
                   multiple={true}
-                  maxFiles={8}
+                  maxFiles={20}
                   presets={PRODUCT_PRESET_IMAGES}
                   aspectRatio="square"
                 />

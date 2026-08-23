@@ -36,9 +36,10 @@ export const CheckoutModal: React.FC = () => {
 
   if (!isCheckoutOpen) return null;
 
-  const freeShippingThreshold = branding.freeShippingThreshold || 2500;
-  const isFreeShipping = cartSubtotal >= freeShippingThreshold;
-  const shippingFee = isFreeShipping ? 0 : 60; // 60 BDT standard delivery
+  const standardDeliveryFee = branding.deliveryFee ?? 150;
+  const freeShippingThreshold = branding.freeShippingThreshold || 0;
+  const isFreeShipping = freeShippingThreshold > 0 && cartSubtotal >= freeShippingThreshold;
+  const shippingFee = isFreeShipping ? 0 : standardDeliveryFee;
   const totalAmount = Math.max(0, cartSubtotal + shippingFee - discountApplied);
 
   const handleCopyBkash = () => {
@@ -188,9 +189,23 @@ export const CheckoutModal: React.FC = () => {
                   <span className="font-mono font-bold text-pink-600 uppercase">{formData.bkashTransactionId}</span>
                 </div>
               )}
-              <div className="flex justify-between pt-1 font-bold text-gray-950 text-sm">
-                <span>Total Amount</span>
-                <span>{branding.currency}{totalAmount.toFixed(2)}</span>
+              <div className="flex justify-between border-b border-gray-200 pb-2">
+                <span className="text-gray-500">Products Subtotal</span>
+                <span className="font-semibold text-gray-900">{branding.currency}{cartSubtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-200 pb-2">
+                <span className="text-gray-500">Shipping Fee (শিপিং ফি)</span>
+                <span className="font-semibold text-gray-900">{shippingFee === 0 ? 'FREE' : `${branding.currency}${shippingFee.toFixed(2)}`}</span>
+              </div>
+              {discountApplied > 0 && (
+                <div className="flex justify-between border-b border-gray-200 pb-2 text-emerald-600">
+                  <span>Discount</span>
+                  <span>-{branding.currency}{discountApplied.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between pt-1 font-bold text-gray-950 text-base">
+                <span>Total Amount (সর্বমোট)</span>
+                <span className="text-emerald-700 font-extrabold">{branding.currency}{totalAmount.toFixed(2)}</span>
               </div>
             </div>
 

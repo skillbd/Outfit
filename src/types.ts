@@ -93,6 +93,7 @@ export interface BrandingSettings {
   contactPhone: string;
   bkashNumber: string;
   freeShippingThreshold: number;
+  deliveryFee?: number; // Standard shipping / delivery fee in BDT (default 150)
   fontFamily?: string; // Heading & Brand Logo Font (e.g. 'Cormorant Garamond', 'Cinzel', 'Playfair Display', 'Bodoni Moda', 'Marcellus', 'Plus Jakarta Sans', 'Outfit', 'Montserrat', 'Lora', 'Prata')
   bodyFontFamily?: string; // Body & UI Text Font (e.g. 'Plus Jakarta Sans', 'Outfit', 'Montserrat', 'Lora', 'Cormorant Garamond')
   updatedAt?: string;

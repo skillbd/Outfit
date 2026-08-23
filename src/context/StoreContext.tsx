@@ -309,7 +309,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         doc(db, 'settings', 'branding'),
         (docSnap) => {
           if (docSnap.exists()) {
-            const loadedBranding = { ...INITIAL_BRANDING, ...docSnap.data() } as BrandingSettings;
+            const data = docSnap.data();
+            const loadedBranding: BrandingSettings = {
+              ...INITIAL_BRANDING,
+              ...data,
+              deliveryFee: data.deliveryFee !== undefined ? Number(data.deliveryFee) : 150,
+            };
             setBranding(loadedBranding);
             try {
               localStorage.setItem(CACHE_KEYS.BRANDING, JSON.stringify(loadedBranding));

@@ -499,23 +499,48 @@ export const AdminBranding: React.FC = () => {
             </div>
           </div>
 
-          {/* Delivery Threshold & Contact */}
-          <div className="pt-3 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Delivery Fee, Threshold & Contact */}
+          <div className="pt-3 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="block font-bold text-gray-700 uppercase mb-1 text-[11px]">
+                Shipping / Delivery Fee ({formData.currency})
+              </label>
+              <input
+                type="number"
+                value={formData.deliveryFee ?? 150}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    deliveryFee: parseFloat(e.target.value) || 0,
+                  })
+                }
+                placeholder="150"
+                className="w-full px-3.5 py-2 border border-gray-300 rounded-lg focus:border-black focus:outline-none font-semibold font-mono"
+              />
+              <span className="text-[10px] text-gray-400 mt-0.5 block">
+                Standard: ৳150 (added to Products price)
+              </span>
+            </div>
+
             <div>
               <label className="block font-bold text-gray-700 uppercase mb-1 text-[11px]">
                 Free Shipping Threshold ({formData.currency})
               </label>
               <input
                 type="number"
-                value={formData.freeShippingThreshold}
+                value={formData.freeShippingThreshold || 0}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
                     freeShippingThreshold: parseFloat(e.target.value) || 0,
                   })
                 }
-                className="w-full px-3.5 py-2 border border-gray-300 rounded-lg focus:border-black focus:outline-none font-semibold"
+                placeholder="0 (Set 0 to disable)"
+                className="w-full px-3.5 py-2 border border-gray-300 rounded-lg focus:border-black focus:outline-none font-semibold font-mono"
               />
+              <span className="text-[10px] text-gray-400 mt-0.5 block">
+                Set 0 to always charge standard delivery
+              </span>
             </div>
 
             <div>

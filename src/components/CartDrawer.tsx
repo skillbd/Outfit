@@ -166,10 +166,22 @@ export const CartDrawer: React.FC = () => {
           {cart.length > 0 && (
             <div className="p-5 sm:p-6 border-t border-gray-100 bg-gray-50/90 space-y-3.5">
               <div className="space-y-1.5 text-xs text-gray-600">
-                <div className="flex justify-between text-sm font-bold text-gray-950">
-                  <span>Subtotal</span>
-                  <span className="text-base font-bold text-gray-950">
+                <div className="flex justify-between text-xs">
+                  <span>Products Subtotal</span>
+                  <span className="font-semibold text-gray-900">
                     {branding.currency}{cartSubtotal.toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span>Delivery / Shipping Fee</span>
+                  <span className="font-semibold text-gray-900">
+                    +{branding.currency}{(branding.deliveryFee ?? 150).toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm font-bold text-gray-950 pt-2 border-t border-gray-200">
+                  <span>Estimated Total</span>
+                  <span className="text-base font-extrabold text-emerald-700">
+                    {branding.currency}{(cartSubtotal + (branding.deliveryFee ?? 150)).toFixed(2)}
                   </span>
                 </div>
               </div>
