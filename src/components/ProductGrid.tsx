@@ -11,6 +11,7 @@ interface ProductGridProps {
 export const ProductGrid: React.FC<ProductGridProps> = ({ onOpenDetails }) => {
   const {
     products,
+    loading,
     searchQuery,
     setSearchQuery,
     selectedCategory,
@@ -130,8 +131,22 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onOpenDetails }) => {
         </div>
       )}
 
-      {/* Product Cards Grid (4 columns) */}
-      {filteredProducts.length > 0 ? (
+      {/* Loading Skeleton State */}
+      {loading && products.length === 0 ? (
+        <div
+          id="products-grid-skeleton"
+          className="mt-8 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 animate-pulse"
+        >
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+            <div key={n} className="flex flex-col space-y-3">
+              <div className="aspect-[4/5] bg-stone-200 rounded-2xl w-full" />
+              <div className="h-4 bg-stone-200 rounded-md w-3/4" />
+              <div className="h-3 bg-stone-200 rounded-md w-1/2" />
+            </div>
+          ))}
+        </div>
+      ) : filteredProducts.length > 0 ? (
+        /* Product Cards Grid (4 columns) */
         <div
           id="products-grid-container"
           className="mt-8 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6"
@@ -169,3 +184,4 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onOpenDetails }) => {
     </section>
   );
 };
+

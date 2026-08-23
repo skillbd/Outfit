@@ -42,9 +42,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
       <div className="aspect-[4/5] bg-gray-100 rounded-2xl mb-3 overflow-hidden relative border border-gray-100 shadow-xs">
         
         {/* Main Image with Smooth Zoom */}
-        <div
-          className="w-full h-full bg-cover bg-center group-hover:scale-105 transition-transform duration-500"
-          style={{ backgroundImage: `url(${isHovered ? secondaryImage : primaryImage})` }}
+        <img
+          src={isHovered ? secondaryImage : primaryImage}
+          alt={product.name}
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
         />
 
         {/* Top Badges */}

@@ -7,10 +7,58 @@ import {
   deleteDoc,
   updateDoc,
 } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { db } from '../lib/firebase';
 import { Product, HeroSlide, Order, BrandingSettings, CartItem, OrderStatus, ProductColor } from '../types';
 import { INITIAL_BRANDING, INITIAL_HERO_SLIDES, INITIAL_PRODUCTS } from '../lib/initialData';
 import { applyStoreFonts } from '../lib/fonts';
+
+const CACHE_KEYS = {
+  PRODUCTS: 'outfit_store_products_cache_v4',
+  HERO_SLIDES: 'outfit_store_hero_slides_cache_v4',
+  BRANDING: 'outfit_store_branding_cache_v4',
+};
+
+// Safe helper to read cached data from localStorage instantly (0ms load time)
+function getLocalCache<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(fallback)) {
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed as unknown as T;
+      }
+      return fallback;
+    }
+    if (parsed && typeof parsed === 'object') {
+      return { ...fallback, ...parsed };
+    }
+    return parsed;
+  } catch (e) {
+    console.warn(`Could not load cache for ${key}:`, e);
+    return fallback;
+  }
+}
+
+// Clean data to prevent Firestore "Unsupported field value: undefined" errors
+function cleanFirestorePayload<T>(obj: T): T {
+  if (obj === null || obj === undefined) {
+    return '' as any;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map((item) => cleanFirestorePayload(item)) as any;
+  }
+  if (typeof obj === 'object') {
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(obj as Record<string, any>)) {
+      if (value !== undefined) {
+        cleaned[key] = cleanFirestorePayload(value);
+      }
+    }
+    return cleaned;
+  }
+  return obj;
+}
 
 interface StoreContextType {
   products: Product[];
@@ -68,32 +116,27 @@ interface StoreContextType {
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
-// Clean data to prevent Firestore "Unsupported field value: undefined" errors
-function cleanFirestorePayload<T>(obj: T): T {
-  if (obj === null || obj === undefined) {
-    return '' as any;
-  }
-  if (Array.isArray(obj)) {
-    return obj.map((item) => cleanFirestorePayload(item)) as any;
-  }
-  if (typeof obj === 'object') {
-    const cleaned: any = {};
-    for (const [key, value] of Object.entries(obj as Record<string, any>)) {
-      if (value !== undefined) {
-        cleaned[key] = cleanFirestorePayload(value);
-      }
-    }
-    return cleaned;
-  }
-  return obj;
-}
-
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
-  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(INITIAL_HERO_SLIDES);
+  // Initialize state directly from LocalStorage cache for instant 0ms render without showing demo version
+  const [products, setProducts] = useState<Product[]>(() => {
+    return getLocalCache<Product[]>(CACHE_KEYS.PRODUCTS, []);
+  });
+
+  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(() => {
+    return getLocalCache<HeroSlide[]>(CACHE_KEYS.HERO_SLIDES, []);
+  });
+
   const [orders, setOrders] = useState<Order[]>([]);
-  const [branding, setBranding] = useState<BrandingSettings>(INITIAL_BRANDING);
-  const [loading, setLoading] = useState(true);
+  
+  const [branding, setBranding] = useState<BrandingSettings>(() => {
+    return getLocalCache<BrandingSettings>(CACHE_KEYS.BRANDING, INITIAL_BRANDING);
+  });
+
+  // If we already have cached products or branding, we don't block the UI
+  const [loading, setLoading] = useState<boolean>(() => {
+    const cachedProds = localStorage.getItem(CACHE_KEYS.PRODUCTS);
+    return !cachedProds;
+  });
 
   // UI state
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -139,7 +182,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     applyStoreFonts(branding.fontFamily, branding.bodyFontFamily);
   }, [branding]);
 
-  // Firestore Real-time Listeners
+  // Firestore Real-time Listeners with Instant Local Caching
   useEffect(() => {
     let unsubs: (() => void)[] = [];
 
@@ -160,21 +203,37 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               return timeB - timeA;
             });
             setProducts(list);
+            try {
+              localStorage.setItem(CACHE_KEYS.PRODUCTS, JSON.stringify(list));
+            } catch {}
           } else {
-            // Seed default products to Firestore if collection is empty
-            INITIAL_PRODUCTS.forEach(async (p) => {
+            // First time setup only if database is brand new
+            const hasInitialized = localStorage.getItem('outfit_store_initialized');
+            if (!hasInitialized) {
+              INITIAL_PRODUCTS.forEach(async (p) => {
+                try {
+                  await setDoc(doc(db, 'products', p.id), cleanFirestorePayload(p));
+                } catch (err) {
+                  console.warn('Auto-seed product error:', err);
+                }
+              });
+              setProducts(INITIAL_PRODUCTS);
+              localStorage.setItem('outfit_store_initialized', 'true');
               try {
-                await setDoc(doc(db, 'products', p.id), cleanFirestorePayload(p));
-              } catch (err) {
-                console.warn('Auto-seed product error:', err);
-              }
-            });
-            setProducts(INITIAL_PRODUCTS);
+                localStorage.setItem(CACHE_KEYS.PRODUCTS, JSON.stringify(INITIAL_PRODUCTS));
+              } catch {}
+            } else {
+              setProducts([]);
+              try {
+                localStorage.setItem(CACHE_KEYS.PRODUCTS, JSON.stringify([]));
+              } catch {}
+            }
           }
+          setLoading(false);
         },
         (error) => {
-          console.warn('Products sync warning (using local fallback):', error.message);
-          setProducts(INITIAL_PRODUCTS);
+          console.warn('Products sync warning (using cached data):', error.message);
+          setLoading(false);
         }
       );
       unsubs.push(prodUnsub);
@@ -190,7 +249,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             });
             list.sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
             
-            // Guarantee exactly 3 valid slides with image fallback
             const guaranteed: HeroSlide[] = [
               list[0] || INITIAL_HERO_SLIDES[0],
               list[1] || INITIAL_HERO_SLIDES[1],
@@ -202,21 +260,29 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             }));
             
             setHeroSlides(guaranteed);
+            try {
+              localStorage.setItem(CACHE_KEYS.HERO_SLIDES, JSON.stringify(guaranteed));
+            } catch {}
           } else {
-            // Seed initial 3 slides
-            INITIAL_HERO_SLIDES.forEach(async (slide) => {
+            // Seed initial 3 slides if first time
+            const hasInitialized = localStorage.getItem('outfit_store_initialized');
+            if (!hasInitialized) {
+              INITIAL_HERO_SLIDES.forEach(async (slide) => {
+                try {
+                  await setDoc(doc(db, 'heroSlides', slide.id), cleanFirestorePayload(slide));
+                } catch (err) {
+                  console.warn('Auto-seed hero slide error:', err);
+                }
+              });
+              setHeroSlides(INITIAL_HERO_SLIDES);
               try {
-                await setDoc(doc(db, 'heroSlides', slide.id), cleanFirestorePayload(slide));
-              } catch (err) {
-                console.warn('Auto-seed hero slide error:', err);
-              }
-            });
-            setHeroSlides(INITIAL_HERO_SLIDES);
+                localStorage.setItem(CACHE_KEYS.HERO_SLIDES, JSON.stringify(INITIAL_HERO_SLIDES));
+              } catch {}
+            }
           }
         },
         (error) => {
-          console.warn('Hero slides sync warning (using local fallback):', error.message);
-          setHeroSlides(INITIAL_HERO_SLIDES);
+          console.warn('Hero slides sync warning:', error.message);
         }
       );
       unsubs.push(heroUnsub);
@@ -243,17 +309,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         doc(db, 'settings', 'branding'),
         (docSnap) => {
           if (docSnap.exists()) {
-            setBranding({ ...INITIAL_BRANDING, ...docSnap.data() } as BrandingSettings);
+            const loadedBranding = { ...INITIAL_BRANDING, ...docSnap.data() } as BrandingSettings;
+            setBranding(loadedBranding);
+            try {
+              localStorage.setItem(CACHE_KEYS.BRANDING, JSON.stringify(loadedBranding));
+            } catch {}
           } else {
             setDoc(doc(db, 'settings', 'branding'), INITIAL_BRANDING).catch((err) => {
               console.warn('Auto-seed branding error:', err);
             });
           }
-          setLoading(false);
         },
         (error) => {
           console.warn('Branding sync warning:', error.message);
-          setLoading(false);
         }
       );
       unsubs.push(brandingUnsub);
@@ -430,12 +498,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Optimistically update local state immediately
     setProducts((prev) => {
       const idx = prev.findIndex((p) => p.id === pId);
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = payload;
-        return next;
-      }
-      return [payload, ...prev];
+      const next = idx >= 0 ? [...prev] : [payload, ...prev];
+      if (idx >= 0) next[idx] = payload;
+      try {
+        localStorage.setItem(CACHE_KEYS.PRODUCTS, JSON.stringify(next));
+      } catch {}
+      return next;
     });
 
     try {
@@ -447,7 +515,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const deleteProduct = async (productId: string) => {
-    setProducts((prev) => prev.filter((p) => p.id !== productId));
+    setProducts((prev) => {
+      const filtered = prev.filter((p) => p.id !== productId);
+      try {
+        localStorage.setItem(CACHE_KEYS.PRODUCTS, JSON.stringify(filtered));
+      } catch {}
+      return filtered;
+    });
     try {
       await deleteDoc(doc(db, 'products', productId));
     } catch (error) {
@@ -461,7 +535,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ...slide,
       updatedAt: new Date().toISOString(),
     };
-    setHeroSlides((prev) => prev.map((s) => (s.id === slide.id ? payload : s)));
+    setHeroSlides((prev) => {
+      const next = prev.map((s) => (s.id === slide.id ? payload : s));
+      try {
+        localStorage.setItem(CACHE_KEYS.HERO_SLIDES, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
     try {
       const sanitized = cleanFirestorePayload(payload);
       await setDoc(doc(db, 'heroSlides', slide.id), sanitized);
@@ -477,6 +557,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       updatedAt: new Date().toISOString(),
     };
     setBranding(payload);
+    try {
+      localStorage.setItem(CACHE_KEYS.BRANDING, JSON.stringify(payload));
+    } catch {}
     try {
       const sanitized = cleanFirestorePayload(payload);
       await setDoc(doc(db, 'settings', 'branding'), sanitized);
@@ -550,3 +633,4 @@ export const useStore = () => {
   }
   return context;
 };
+
