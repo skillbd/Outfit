@@ -154,14 +154,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                   key={tab.id}
                   id={`admin-tab-btn-${tab.id}`}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-blue-50 text-blue-700 font-bold'
+                      ? 'bg-amber-50 text-amber-950 font-bold border border-amber-300/80 shadow-2xs'
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-amber-600' : 'text-gray-400'}`} />
                     <span>{tab.label}</span>
                   </div>
                   {tab.badge !== undefined && tab.badge > 0 && (
@@ -185,14 +185,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                   key={tab.id}
                   id={`admin-tab-btn-${tab.id}`}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-blue-50 text-blue-700 font-bold'
+                      ? 'bg-amber-50 text-amber-950 font-bold border border-amber-300/80 shadow-2xs'
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-amber-600' : 'text-gray-400'}`} />
                     <span>{tab.label}</span>
                   </div>
                 </button>
@@ -225,7 +225,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBackToStore })
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold shrink-0 rounded-lg ${
                   isActive
-                    ? 'bg-blue-600 text-white shadow-xs'
+                    ? 'bg-[#111111] text-[#FACC15] shadow-xs'
                     : 'bg-white text-gray-700 border border-gray-200'
                 }`}
               >

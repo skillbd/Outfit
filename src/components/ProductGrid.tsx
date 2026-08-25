@@ -20,30 +20,43 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onOpenDetails }) => {
     setSortBy,
   } = useStore();
 
-  // Extract all unique categories
+  // Extract all unique categories with dynamic product counts
   const categories = useMemo(() => {
-    const set = new Set<string>();
+    const counts: Record<string, number> = {};
     products.forEach((p) => {
-      if (p.category) set.add(p.category);
+      const cat = (p.category || 'General').trim();
+      counts[cat] = (counts[cat] || 0) + 1;
     });
-    return ['All', ...Array.from(set)];
+
+    const uniqueCats = Object.keys(counts).sort();
+    return [
+      { name: 'All', count: products.length },
+      ...uniqueCats.map((cat) => ({ name: cat, count: counts[cat] })),
+    ];
   }, [products]);
 
-  // Filter & Sort logic
+  // Filter & Sort logic with complete null-safety
   const filteredProducts = useMemo(() => {
     return products
       .filter((product) => {
-        const matchesCategory =
-          selectedCategory === 'All' ||
-          product.category.toLowerCase() === selectedCategory.toLowerCase();
+        const prodCat = (product.category || 'General').trim().toLowerCase();
+        const selCat = (selectedCategory || 'All').trim().toLowerCase();
+        const matchesCategory = selCat === 'all' || prodCat === selCat;
         
         const q = searchQuery.trim().toLowerCase();
+        const name = (product.name || '').toLowerCase();
+        const desc = (product.description || '').toLowerCase();
+        const cat = (product.category || '').toLowerCase();
+        const badge = (product.badge || '').toLowerCase();
+        const id = (product.id || '').toLowerCase();
+
         const matchesSearch =
           !q ||
-          product.name.toLowerCase().includes(q) ||
-          product.description.toLowerCase().includes(q) ||
-          product.category.toLowerCase().includes(q) ||
-          (product.badge && product.badge.toLowerCase().includes(q));
+          name.includes(q) ||
+          desc.includes(q) ||
+          cat.includes(q) ||
+          badge.includes(q) ||
+          id.includes(q);
 
         return matchesCategory && matchesSearch;
       })
@@ -63,70 +76,83 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ onOpenDetails }) => {
     <section id="products-catalog-section" className="py-10 sm:py-14 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       
       {/* Header & Filter Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-gray-100">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-gray-200/70">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="w-2 h-2 rounded-full bg-blue-600"></span>
-            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">
-              Store Catalog
+            <span className="w-2 h-2 rounded-full bg-[#FACC15] animate-pulse"></span>
+            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">
+              Store Catalog ({products.length} {products.length === 1 ? 'Item' : 'Items'})
             </span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">
-            {selectedCategory === 'All' ? 'Featured Products' : `${selectedCategory} Collection`}
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-gray-900 tracking-tight">
+            {selectedCategory === 'All' ? 'Exclusive Collections (সব পণ্য)' : `${selectedCategory} Collection`}
           </h2>
         </div>
 
         {/* Categories and Sort controls */}
         <div className="flex flex-wrap items-center gap-3">
-          {/* Category Pills */}
-          <div className="flex flex-wrap items-center gap-1 p-1 bg-gray-100/90 rounded-full border border-gray-200/60 shadow-2xs">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                id={`cat-filter-btn-${cat.toLowerCase().replace(/\s+/g, '-')}`}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-3.5 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer ${
-                  selectedCategory.toLowerCase() === cat.toLowerCase()
-                    ? 'bg-gray-950 text-white shadow-xs'
-                    : 'text-gray-600 hover:text-black hover:bg-gray-200/70'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+          {/* Category Pills with horizontal scroll on mobile */}
+          <div className="flex items-center gap-1.5 p-1 bg-stone-100/90 rounded-2xl border border-stone-200 shadow-2xs overflow-x-auto max-w-full">
+            {categories.map((catItem) => {
+              const isSelected = selectedCategory.trim().toLowerCase() === catItem.name.trim().toLowerCase();
+              return (
+                <button
+                  key={catItem.name}
+                  id={`cat-filter-btn-${catItem.name.toLowerCase().replace(/\s+/g, '-')}`}
+                  onClick={() => setSelectedCategory(catItem.name)}
+                  className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                    isSelected
+                      ? 'bg-[#111111] text-[#FACC15] shadow-xs'
+                      : 'text-gray-600 hover:text-black hover:bg-stone-200/80'
+                  }`}
+                >
+                  <span>{catItem.name}</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-white/20 text-[#FACC15]' : 'bg-stone-200 text-gray-600'}`}>
+                    {catItem.count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
           {/* Sort Dropdown */}
-          <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3.5 py-1.5 text-xs text-gray-700 shadow-2xs">
-            <SlidersHorizontal className="w-3.5 h-3.5 text-gray-400" />
+          <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3.5 py-2 text-xs text-gray-700 shadow-2xs shrink-0">
+            <SlidersHorizontal className="w-3.5 h-3.5 text-gray-500" />
             <select
               id="product-sort-select"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="bg-transparent text-xs font-semibold text-gray-900 focus:outline-none cursor-pointer pr-1"
+              className="bg-transparent text-xs font-bold text-gray-900 focus:outline-none cursor-pointer pr-1"
             >
-              <option value="featured">Featured</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
-              <option value="rating">Top Rated</option>
-              <option value="newest">Newest Arrivals</option>
+              <option value="featured">Featured (জনপ্রিয়)</option>
+              <option value="price-low">Price: Low to High (কম থেকে বেশি দাম)</option>
+              <option value="price-high">Price: High to Low (বেশি থেকে কম দাম)</option>
+              <option value="rating">Top Rated (সর্বোচ্চ রেটিং)</option>
+              <option value="newest">Newest Arrivals (নতুন কালেকশন)</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* Active Search Filter Banner */}
-      {searchQuery && (
-        <div className="mt-4 flex items-center justify-between bg-blue-50 border border-blue-100 px-4 py-2.5 rounded-xl text-xs text-blue-900">
-          <span>
-            Filtering results for: <strong className="font-semibold">"{searchQuery}"</strong> ({filteredProducts.length} items found)
-          </span>
+      {/* Active Category / Search Filter Banner */}
+      {(searchQuery || selectedCategory !== 'All') && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 bg-amber-50 border border-amber-200/80 px-4 py-2.5 rounded-xl text-xs text-amber-950">
+          <div className="flex items-center gap-2">
+            <span>
+              Showing <strong>{filteredProducts.length}</strong> of <strong>{products.length}</strong> products
+              {selectedCategory !== 'All' && <span> in <em>"{selectedCategory}"</em></span>}
+              {searchQuery && <span> matching <em>"{searchQuery}"</em></span>}
+            </span>
+          </div>
           <button
-            id="clear-search-query-btn"
-            onClick={() => setSearchQuery('')}
-            className="text-blue-700 font-bold hover:underline cursor-pointer"
+            id="clear-all-product-filters-btn"
+            onClick={() => {
+              setSearchQuery('');
+              setSelectedCategory('All');
+            }}
+            className="text-amber-900 font-bold hover:underline cursor-pointer bg-amber-200/60 px-2.5 py-1 rounded-lg"
           >
-            Clear Search
+            Show All Products (সব পণ্য দেখুন)
           </button>
         </div>
       )}

@@ -1,5 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { X, Star, ShoppingBag, Check, ShieldCheck, Truck, RotateCcw, Plus, Minus, Zap, Info, CheckCircle2, Image as ImageIcon } from 'lucide-react';
+import {
+  X,
+  Star,
+  ShoppingBag,
+  Check,
+  ShieldCheck,
+  Truck,
+  RotateCcw,
+  Plus,
+  Minus,
+  Zap,
+  Info,
+  CheckCircle2,
+  Image as ImageIcon,
+  MessageCircle,
+  Clock,
+  Sparkles,
+} from 'lucide-react';
 import { Product } from '../types';
 import { useStore } from '../context/StoreContext';
 
@@ -10,7 +27,7 @@ interface ProductDetailModalProps {
 
 export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, onClose }) => {
   const { branding, addToCart, setIsCheckoutOpen } = useStore();
-  
+
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [quantity, setQuantity] = useState(1);
@@ -29,14 +46,19 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
 
   if (!product) return null;
 
-  const images = product.images && product.images.length > 0
-    ? product.images
-    : ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800'];
+  const images =
+    product.images && product.images.length > 0
+      ? product.images
+      : ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800'];
 
   const selectedImageUrl = images[activeImageIndex] || images[0];
 
   const hasDiscount = Boolean(product.originalPrice && product.originalPrice > product.price);
-  const discountPct = product.discountPercentage || (hasDiscount ? Math.round(((product.originalPrice! - product.price) / product.originalPrice!) * 100) : 0);
+  const discountPct =
+    product.discountPercentage ||
+    (hasDiscount
+      ? Math.round(((product.originalPrice! - product.price) / product.originalPrice!) * 100)
+      : 0);
   const isOutOfStock = product.stock <= 0;
 
   const handleAddToCart = () => {
@@ -53,15 +75,30 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
     setIsCheckoutOpen(true);
   };
 
+  // Direct WhatsApp Order
+  const handleWhatsAppOrder = () => {
+    const rawPhone = branding.contactPhone || '8801700000000';
+    const cleanPhone = rawPhone.replace(/[^0-9]/g, '');
+    const targetPhone = cleanPhone.startsWith('88') ? cleanPhone : `88${cleanPhone}`;
+
+    const message = encodeURIComponent(
+      `Hello ${branding.websiteName || 'Outfit'},\n\nI want to order this product:\n🛍️ *Product:* ${product.name}\n🆔 *SKU/ID:* ${product.id}\n💰 *Price:* ${branding.currency}${product.price}\n📦 *Quantity:* ${quantity}${
+        selectedSize ? `\n📏 *Size:* ${selectedSize}` : ''
+      }\n🖼️ *Selected Photo:* Variant #${activeImageIndex + 1}\n\nPlease confirm my order. Thank you!`
+    );
+
+    window.open(`https://wa.me/${targetPhone}?text=${message}`, '_blank');
+  };
+
   return (
     <div
       id="product-detail-modal-overlay"
-      className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 lg:p-8 animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
         id="product-detail-modal-container"
-        className="relative bg-white w-full max-w-4xl max-h-[92vh] overflow-y-auto rounded-3xl shadow-2xl border border-gray-200 animate-in zoom-in-95 duration-200"
+        className="relative bg-white w-full max-w-4xl max-h-[92vh] overflow-y-auto rounded-2xl sm:rounded-3xl shadow-2xl border border-gray-200 animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
@@ -74,28 +111,33 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
           <X className="w-5 h-5" />
         </button>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-6 sm:p-10">
-          
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10 p-5 sm:p-8 lg:p-10">
           {/* Left Column: Image Gallery & Photo Selection */}
           <div className="flex flex-col gap-3">
             {/* Main Stage Image */}
-            <div className="relative aspect-[4/5] w-full overflow-hidden bg-gray-100 rounded-2xl border border-gray-100 shadow-xs">
+            <div className="relative aspect-[4/5] w-full overflow-hidden bg-gray-100 rounded-2xl border border-gray-100 shadow-xs group">
               <img
                 src={selectedImageUrl}
                 alt={product.name}
                 referrerPolicy="no-referrer"
-                className="h-full w-full object-cover object-center transition-all duration-300"
+                className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
               />
-              
+
               {/* Selected Photo Variant Tag */}
               <div className="absolute bottom-3 left-3 bg-[#111111]/90 backdrop-blur-xs text-[#FACC15] text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-md shadow-xs flex items-center gap-1.5 border border-yellow-400/20">
                 <CheckCircle2 className="w-3.5 h-3.5 text-[#FACC15]" />
-                <span>Selected Photo: Variant #{activeImageIndex + 1}</span>
+                <span>Selected: Photo #{activeImageIndex + 1}</span>
               </div>
 
               {product.badge && (
                 <span className="absolute top-3 left-3 bg-gray-950 text-white text-[10px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-md shadow-sm">
                   {product.badge}
+                </span>
+              )}
+
+              {hasDiscount && (
+                <span className="absolute top-3 right-3 bg-[#FACC15] text-[#111111] text-[10px] font-extrabold tracking-wide uppercase px-2.5 py-1 rounded-md shadow-sm">
+                  -{discountPct}% OFF
                 </span>
               )}
             </div>
@@ -148,12 +190,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
             <div>
               {/* Category & SKU */}
               <div className="flex items-center justify-between text-xs text-gray-400 uppercase tracking-widest font-mono">
-                <span className="font-bold text-[#111111]">{product.category}</span>
+                <span className="font-bold text-[#111111] bg-stone-100 px-2 py-0.5 rounded">
+                  {product.category}
+                </span>
                 <span>ID: {product.id}</span>
               </div>
 
               {/* Title */}
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mt-1">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-gray-900 tracking-tight mt-2">
                 {product.name}
               </h1>
 
@@ -175,19 +219,21 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                   {product.rating ? product.rating.toFixed(1) : '5.0'}
                 </span>
                 <span className="text-xs text-gray-400">
-                  ({product.reviewCount || 18} reviews)
+                  ({product.reviewCount || 18} verified reviews)
                 </span>
               </div>
 
               {/* Price Section */}
               <div className="mt-3 flex items-baseline gap-3">
                 <span className="text-2xl sm:text-3xl font-bold text-gray-900">
-                  {branding.currency}{product.price.toFixed(2)}
+                  {branding.currency}
+                  {product.price.toFixed(2)}
                 </span>
                 {hasDiscount && (
                   <>
                     <span className="text-base text-gray-400 line-through">
-                      {branding.currency}{product.originalPrice?.toFixed(2)}
+                      {branding.currency}
+                      {product.originalPrice?.toFixed(2)}
                     </span>
                     <span className="bg-[#FACC15]/20 text-[#111111] border border-[#FACC15] text-xs font-extrabold px-2 py-0.5 rounded-md">
                       SAVE {discountPct}%
@@ -200,20 +246,24 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
               <div className="mt-2.5 flex items-center gap-2">
                 <div
                   className={`w-2 h-2 rounded-full ${
-                    isOutOfStock ? 'bg-rose-500' : product.stock <= 5 ? 'bg-amber-500' : 'bg-emerald-500'
+                    isOutOfStock
+                      ? 'bg-rose-500'
+                      : product.stock <= 5
+                      ? 'bg-amber-500 animate-ping'
+                      : 'bg-emerald-500'
                   }`}
                 />
-                <span className="text-xs font-semibold text-gray-600">
+                <span className="text-xs font-semibold text-gray-700">
                   {isOutOfStock
-                    ? 'Currently Out of Stock'
+                    ? 'Currently Out of Stock (স্টকে নেই)'
                     : product.stock <= 5
-                    ? `Low Inventory: Only ${product.stock} units remaining`
+                    ? `Low Inventory: Only ${product.stock} units remaining (সীমিত স্টক)`
                     : `In Stock (${product.stock} units ready to ship)`}
                 </span>
               </div>
 
               {/* Description */}
-              <p className="text-xs text-gray-600 leading-relaxed mt-4 pt-4 border-t border-gray-100">
+              <p className="text-xs sm:text-sm text-gray-600 leading-relaxed mt-4 pt-4 border-t border-gray-100">
                 {product.description}
               </p>
 
@@ -222,15 +272,16 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                 <div className="mt-4">
                   <div className="flex items-center justify-between text-xs mb-1.5">
                     <span className="font-bold text-gray-800 uppercase tracking-wide text-[10px]">
-                      Size: <span className="font-medium text-gray-600">{selectedSize}</span>
+                      Select Size (সাইজ নির্বাচন করুন):{' '}
+                      <span className="font-semibold text-amber-700">{selectedSize}</span>
                     </span>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-2">
                     {product.sizes.map((size) => (
                       <button
                         key={size}
                         onClick={() => setSelectedSize(size)}
-                        className={`min-w-[40px] px-3 py-1.5 text-xs font-semibold rounded-lg transition-all border cursor-pointer ${
+                        className={`min-w-[44px] px-3.5 py-2 text-xs font-bold rounded-xl transition-all border cursor-pointer ${
                           selectedSize === size
                             ? 'bg-[#111111] text-[#FACC15] border-[#111111] shadow-xs'
                             : 'bg-gray-50 text-gray-800 border-gray-200 hover:border-gray-300 hover:bg-gray-100'
@@ -246,13 +297,13 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
               {/* Quantity Stepper */}
               <div className="mt-4 flex items-center gap-3">
                 <span className="text-xs font-bold text-gray-800 uppercase tracking-wide text-[10px]">
-                  Quantity:
+                  Quantity (পরিমাণ):
                 </span>
-                <div className="flex items-center border border-gray-200 bg-gray-50 rounded-lg">
+                <div className="flex items-center border border-gray-200 bg-gray-50 rounded-xl p-0.5">
                   <button
                     onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                     disabled={quantity <= 1 || isOutOfStock}
-                    className="p-1.5 text-gray-600 hover:text-black disabled:opacity-30 cursor-pointer"
+                    className="p-2 text-gray-600 hover:text-black disabled:opacity-30 cursor-pointer"
                     aria-label="Decrease quantity"
                   >
                     <Minus className="w-3.5 h-3.5" />
@@ -263,7 +314,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                   <button
                     onClick={() => setQuantity((q) => Math.min(product.stock || 99, q + 1))}
                     disabled={quantity >= (product.stock || 99) || isOutOfStock}
-                    className="p-1.5 text-gray-600 hover:text-black disabled:opacity-30 cursor-pointer"
+                    className="p-2 text-gray-600 hover:text-black disabled:opacity-30 cursor-pointer"
                     aria-label="Increase quantity"
                   >
                     <Plus className="w-3.5 h-3.5" />
@@ -273,8 +324,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
             </div>
 
             {/* Action Buttons */}
-            <div className="pt-5 border-t border-gray-100 space-y-3">
-              <div className="flex gap-2.5">
+            <div className="pt-5 border-t border-gray-100 space-y-2.5">
+              <div className="flex flex-col sm:flex-row gap-2.5">
                 <button
                   id="modal-add-to-cart-btn"
                   onClick={handleAddToCart}
@@ -295,7 +346,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                   ) : (
                     <>
                       <ShoppingBag className="w-4 h-4 text-[#111111]" />
-                      <span>{isOutOfStock ? 'Sold Out' : 'Add to Bag'}</span>
+                      <span>{isOutOfStock ? 'Sold Out' : 'Add to Bag (ব্যাগে যোগ করুন)'}</span>
                     </>
                   )}
                 </button>
@@ -304,17 +355,28 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                   id="modal-buy-now-btn"
                   onClick={handleBuyNow}
                   disabled={isOutOfStock}
-                  className="flex-1 py-3 bg-[#111111] hover:bg-black text-[#FACC15] text-xs font-bold tracking-wider uppercase rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
+                  className="flex-1 py-3 bg-[#111111] hover:bg-black text-[#FACC15] text-xs font-bold tracking-wider uppercase rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs flex items-center justify-center gap-2"
                 >
-                  Buy Now
+                  <Zap className="w-4 h-4 text-[#FACC15]" />
+                  <span>Buy Now (সরাসরি কিনুন)</span>
                 </button>
               </div>
 
+              {/* Direct WhatsApp Order Button */}
+              <button
+                id="modal-whatsapp-order-btn"
+                onClick={handleWhatsAppOrder}
+                className="w-full py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+              >
+                <MessageCircle className="w-4 h-4 text-emerald-600" />
+                <span>Order via WhatsApp (হোয়াটসঅ্যাপে সরাসরি অর্ডার করুন)</span>
+              </button>
+
               {/* Trust Assurances */}
-              <div className="grid grid-cols-3 gap-2 pt-3 text-gray-600 text-[10px]">
+              <div className="grid grid-cols-3 gap-2 pt-2 text-gray-600 text-[10px]">
                 <div className="flex items-center gap-1.5 bg-gray-50 p-2 rounded-lg border border-gray-100">
                   <Truck className="w-3.5 h-3.5 text-[#111111] shrink-0" />
-                  <span className="truncate font-medium">Fast Shipping</span>
+                  <span className="truncate font-medium">৳১৫০ ডেলিভারি চার্জ</span>
                 </div>
                 <button
                   type="button"
@@ -324,11 +386,13 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                   title="Click to view Return Policy"
                 >
                   <RotateCcw className="w-3.5 h-3.5 text-[#111111] shrink-0 group-hover:rotate-45 transition-transform" />
-                  <span className="truncate font-bold underline decoration-yellow-400 underline-offset-2">Return Policy</span>
+                  <span className="truncate font-bold underline decoration-yellow-400 underline-offset-2">
+                    রিটার্ন পলিসি
+                  </span>
                 </button>
                 <div className="flex items-center gap-1.5 bg-gray-50 p-2 rounded-lg border border-gray-100">
                   <ShieldCheck className="w-3.5 h-3.5 text-[#111111] shrink-0" />
-                  <span className="truncate font-medium">Verified Quality</span>
+                  <span className="truncate font-medium">ক্যাশ অন ডেলিভারি</span>
                 </div>
               </div>
             </div>
@@ -348,56 +412,50 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
         >
           <div
             id="return-policy-card"
-            className="bg-white max-w-md w-full rounded-2xl shadow-2xl border border-gray-200 overflow-hidden animate-in zoom-in-95 duration-150"
+            className="bg-white max-w-md w-full rounded-2xl p-6 shadow-2xl border border-gray-200 space-y-4 animate-in zoom-in-95 duration-150"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="bg-gray-950 text-white p-5 flex items-center justify-between">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-[#FACC15] text-[#111111] flex items-center justify-center font-bold">
-                  <RotateCcw className="w-4 h-4" />
+                  <RotateCcw className="w-4 h-4 text-[#111111]" />
                 </div>
-                <div>
-                  <h3 className="text-sm font-bold tracking-tight">রিটার্ন পলিসি (Return Policy)</h3>
-                  <p className="text-[11px] text-gray-400">পণ্য গ্রহণ ও পরিবর্তন সংক্রান্ত নিয়মাবলী</p>
-                </div>
+                <h3 className="font-bold text-gray-900 text-sm">
+                  রিটার্ন পলিসি (Return Policy)
+                </h3>
               </div>
               <button
-                type="button"
-                id="close-return-policy-btn"
                 onClick={() => setShowReturnPolicy(false)}
-                className="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-gray-800 transition-colors cursor-pointer"
+                className="text-gray-400 hover:text-black p-1 rounded-md cursor-pointer"
                 aria-label="Close Return Policy"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Policy Content */}
-            <div className="p-5 sm:p-6 space-y-4 text-xs text-gray-700 leading-relaxed">
-              <div className="flex items-start gap-3 p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl text-amber-950">
-                <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="space-y-3.5 text-xs text-gray-700 leading-relaxed">
+              <div className="flex items-start gap-3 p-3.5 bg-amber-50/80 border border-amber-200 rounded-xl text-amber-950">
+                <CheckCircle2 className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
                 <p className="font-semibold text-xs leading-relaxed">
-                  ডেলিভারি ম্যান দাঁড়িয়ে থাকা অবস্থায় প্রোডাক্টটি চেক করে নিতে হবে। প্রোডাক্টে কোনো ত্রুটি, ভুল পণ্য বা সমস্যা পাওয়া গেলে ডেলিভারি ম্যানকে সঙ্গে সঙ্গে জানিয়ে তখনই রিটার্ন করতে হবে।
+                  ডেলিভারি ম্যান দাঁড়িয়ে থাকা অবস্থায় প্রোডাক্টটি চেক করে নিতে হবে, প্রোডাক্ট এর কোন ত্রুটি বের হলে তখনই রিটার্ন করতে বলবেন।
                 </p>
               </div>
 
               <div className="flex items-start gap-3 p-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800">
-                <Truck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                 <p className="font-medium text-xs leading-relaxed">
-                  ডেলিভারি ম্যান চলে যাওয়ার পর প্রোডাক্টটি রিটার্ন বা পরিবর্তন করতে চাইলে অতিরিক্ত ডেলিভারি চার্জ প্রদান করতে হবে।
+                  ডেলিভারি ম্যান চলে যাওয়ার পর প্রোডাক্টটি রিটার্ন অথবা পরিবর্তন করে নিতে চাইলে অতিরক্ত ডেলিভারি চার্জ প্রদান করতে হবে।
                 </p>
               </div>
+            </div>
 
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowReturnPolicy(false)}
-                  className="w-full py-2.5 bg-gray-950 hover:bg-black text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
-                >
-                  বুঝেছি (Close)
-                </button>
-              </div>
+            <div className="pt-2">
+              <button
+                onClick={() => setShowReturnPolicy(false)}
+                className="w-full py-2.5 bg-[#111111] text-[#FACC15] rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-black transition-colors cursor-pointer"
+              >
+                বুঝেছি (Close)
+              </button>
             </div>
           </div>
         </div>
@@ -405,3 +463,4 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
     </div>
   );
 };
+

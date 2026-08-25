@@ -27,11 +27,25 @@ export const AdminProducts: React.FC = () => {
   const [customSize, setCustomSize] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // Filter products
+  // Dynamic unique categories for dropdown & datalist suggestions
+  const allCategories = React.useMemo(() => {
+    const set = new Set<string>();
+    products.forEach((p) => {
+      if (p.category && p.category.trim()) set.add(p.category.trim());
+    });
+    return Array.from(set).sort();
+  }, [products]);
+
+  // Filter products with full null-safety
   const filtered = products.filter((p) => {
-    const matchesCat = categoryFilter === 'All' || p.category.toLowerCase() === categoryFilter.toLowerCase();
+    const pCat = (p.category || 'General').trim().toLowerCase();
+    const fCat = categoryFilter.trim().toLowerCase();
+    const matchesCat = fCat === 'all' || pCat === fCat;
+    
     const q = searchQuery.trim().toLowerCase();
-    const matchesQuery = !q || p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q);
+    const pName = (p.name || '').toLowerCase();
+    const pId = (p.id || '').toLowerCase();
+    const matchesQuery = !q || pName.includes(q) || pId.includes(q) || pCat.includes(q);
     return matchesCat && matchesQuery;
   });
 
@@ -171,14 +185,14 @@ export const AdminProducts: React.FC = () => {
           </p>
         </div>
 
-        <button
-          id="admin-add-new-product-btn"
-          onClick={handleOpenAdd}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors shadow-xs cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add New Product</span>
-        </button>
+              <button
+                id="admin-add-new-product-btn"
+                onClick={handleOpenAdd}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#111111] hover:bg-black text-[#FACC15] text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer border border-yellow-500/20"
+              >
+                <Plus className="w-4 h-4 text-[#FACC15]" />
+                <span>Add New Product</span>
+              </button>
       </div>
 
       {/* Filter and Search Bar */}
@@ -203,11 +217,12 @@ export const AdminProducts: React.FC = () => {
             onChange={(e) => setCategoryFilter(e.target.value)}
             className="px-3 py-2 text-xs border border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none bg-white cursor-pointer"
           >
-            <option value="All">All Categories</option>
-            <option value="Apparel">Apparel</option>
-            <option value="Accessories">Accessories</option>
-            <option value="Footwear">Footwear</option>
-            <option value="Living">Living</option>
+            <option value="All">All Categories ({products.length})</option>
+            {allCategories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat} ({products.filter((p) => (p.category || 'General').trim().toLowerCase() === cat.toLowerCase()).length})
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -385,11 +400,30 @@ export const AdminProducts: React.FC = () => {
                   <input
                     type="text"
                     required
+                    list="category-options-list"
                     value={editingProduct.category}
                     onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
-                    placeholder="e.g. Apparel, Accessories, Footwear, Living"
+                    placeholder="e.g. Apparel, Panjabi, Shirt, Footwear, Saree"
                     className="w-full px-3.5 py-2 border border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none"
                   />
+                  <datalist id="category-options-list">
+                    {allCategories.map((c) => (
+                      <option key={c} value={c} />
+                    ))}
+                    <option value="Apparel" />
+                    <option value="Accessories" />
+                    <option value="Footwear" />
+                    <option value="Living" />
+                    <option value="Men" />
+                    <option value="Women" />
+                    <option value="Panjabi" />
+                    <option value="Shirt" />
+                    <option value="T-Shirt" />
+                    <option value="Dress" />
+                    <option value="Saree" />
+                    <option value="Perfume" />
+                    <option value="Watch" />
+                  </datalist>
                 </div>
 
                 <div>
@@ -568,7 +602,7 @@ export const AdminProducts: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-sm disabled:opacity-50 cursor-pointer"
+                  className="px-5 py-2 bg-[#FACC15] hover:bg-[#EAB308] text-[#111111] font-bold rounded-lg shadow-sm disabled:opacity-50 cursor-pointer transition-colors"
                 >
                   {isSaving ? 'Saving...' : 'Save Product'}
                 </button>

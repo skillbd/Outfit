@@ -11,6 +11,7 @@ import { db } from '../lib/firebase';
 import { Product, HeroSlide, Order, BrandingSettings, CartItem, OrderStatus, ProductColor } from '../types';
 import { INITIAL_BRANDING, INITIAL_HERO_SLIDES, INITIAL_PRODUCTS } from '../lib/initialData';
 import { applyStoreFonts } from '../lib/fonts';
+import { compressDataUrlIfNeeded } from '../utils/imageUtils';
 
 const CACHE_KEYS = {
   PRODUCTS: 'outfit_store_products_cache_v4',
@@ -194,7 +195,38 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           if (!snapshot.empty) {
             const list: Product[] = [];
             snapshot.forEach((docSnap) => {
-              list.push({ id: docSnap.id, ...docSnap.data() } as Product);
+              const d = docSnap.data();
+              if (!d) return;
+              const prodName = String(d.name || '').trim() || 'Product';
+              const prodCat = String(d.category || '').trim() || 'Apparel';
+              const prodPrice = typeof d.price === 'number' ? d.price : parseFloat(String(d.price)) || 0;
+              const prodOrigPrice = d.originalPrice ? (typeof d.originalPrice === 'number' ? d.originalPrice : parseFloat(String(d.originalPrice))) : undefined;
+              const prodDiscount = d.discountPercentage ? Number(d.discountPercentage) : 0;
+              const prodStock = d.stock !== undefined ? Math.max(0, parseInt(String(d.stock), 10) || 0) : 10;
+              const prodImages = Array.isArray(d.images) && d.images.length > 0
+                ? d.images.filter((img: any) => typeof img === 'string' && img.trim().length > 0)
+                : ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800'];
+              
+              list.push({
+                ...d,
+                id: docSnap.id,
+                name: prodName,
+                description: String(d.description || ''),
+                category: prodCat,
+                price: prodPrice,
+                originalPrice: prodOrigPrice && prodOrigPrice > prodPrice ? prodOrigPrice : undefined,
+                discountPercentage: prodDiscount,
+                stock: prodStock,
+                images: prodImages.length > 0 ? prodImages : ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800'],
+                sizes: Array.isArray(d.sizes) ? d.sizes : [],
+                colors: Array.isArray(d.colors) ? d.colors : [],
+                featured: Boolean(d.featured),
+                rating: d.rating ? Number(d.rating) : 5.0,
+                reviewCount: d.reviewCount ? Number(d.reviewCount) : 1,
+                badge: d.badge ? String(d.badge).trim() : undefined,
+                createdAt: d.createdAt || new Date().toISOString(),
+                updatedAt: d.updatedAt || new Date().toISOString(),
+              } as Product);
             });
             // Sort by createdAt descending so newly added products appear first
             list.sort((a, b) => {
@@ -472,8 +504,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Product CRUD
   const saveProduct = async (product: Product) => {
     const pId = product.id && product.id.trim() ? product.id.trim() : 'prod_' + Date.now();
-    const cleanImages = (product.images || []).filter((img) => typeof img === 'string' && img.trim().length > 0);
+    const rawImages = (product.images || []).filter((img) => typeof img === 'string' && img.trim().length > 0);
     const fallbackImage = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=1000&auto=format&fit=crop';
+
+    // Compress all images so the document stays ultra-lightweight and well within Firestore's 1MB limit
+    const compressedImages = rawImages.length > 0
+      ? await Promise.all(rawImages.map((img) => compressDataUrlIfNeeded(img, 720, 0.68)))
+      : [fallbackImage];
 
     const numPrice = Number(product.price) >= 0 ? Number(product.price) : 0;
     const numOrigPrice = product.originalPrice && Number(product.originalPrice) > 0 ? Number(product.originalPrice) : undefined;
@@ -489,7 +526,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       discountPercentage: numDiscount,
       stock: numStock,
       category: product.category?.trim() || 'Apparel',
-      images: cleanImages.length > 0 ? cleanImages : [fallbackImage],
+      images: compressedImages,
       sizes: product.sizes || [],
       colors: product.colors || [],
       featured: Boolean(product.featured),
@@ -516,6 +553,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       await setDoc(doc(db, 'products', pId), sanitized);
     } catch (error) {
       console.warn('Firestore saveProduct write warning:', error);
+      throw error;
     }
   };
 

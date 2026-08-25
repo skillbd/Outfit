@@ -75,8 +75,8 @@ export const AdminHeroSlider: React.FC = () => {
       {/* Top Banner */}
       <div className="bg-white p-5 sm:p-6 rounded-2xl border border-gray-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-blue-600 text-xs font-bold uppercase tracking-wider mb-1">
-            <Sparkles className="w-3.5 h-3.5" />
+          <div className="flex items-center gap-2 text-amber-600 text-xs font-bold uppercase tracking-wider mb-1">
+            <Sparkles className="w-3.5 h-3.5 text-[#FACC15]" />
             <span>Storefront Visual Showcase</span>
           </div>
           <h2 className="text-xl font-bold text-gray-900">
@@ -144,9 +144,9 @@ export const AdminHeroSlider: React.FC = () => {
             <button
               onClick={handleSaveCurrentSlide}
               disabled={savingSlideId === currentEditingSlide.id}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#FACC15] hover:bg-[#EAB308] text-[#111111] font-bold rounded-lg transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
             >
-              <Save className="w-3.5 h-3.5" />
+              <Save className="w-3.5 h-3.5 text-[#111111]" />
               <span>{savingSlideId === currentEditingSlide.id ? 'Saving...' : 'Save Banner'}</span>
             </button>
           </div>
