@@ -41,6 +41,21 @@ function getLocalCache<T>(key: string, fallback: T): T {
   }
 }
 
+// Safe helper to persist data to localStorage with quota overflow protection
+function safeSetLocalCache<T>(key: string, data: T): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (e) {
+    console.warn(`LocalStorage quota reached for ${key}. Clearing older caches...`, e);
+    try {
+      localStorage.removeItem('store_cart_items');
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch {
+      // ignore if storage completely full
+    }
+  }
+}
+
 // Clean data to prevent Firestore "Unsupported field value: undefined" errors
 function cleanFirestorePayload<T>(obj: T): T {
   if (obj === null || obj === undefined) {
@@ -235,9 +250,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               return timeB - timeA;
             });
             setProducts(list);
-            try {
-              localStorage.setItem(CACHE_KEYS.PRODUCTS, JSON.stringify(list));
-            } catch {}
+            safeSetLocalCache(CACHE_KEYS.PRODUCTS, list);
           } else {
             // First time setup only if database is brand new
             const hasInitialized = localStorage.getItem('outfit_store_initialized');
@@ -251,14 +264,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               });
               setProducts(INITIAL_PRODUCTS);
               localStorage.setItem('outfit_store_initialized', 'true');
-              try {
-                localStorage.setItem(CACHE_KEYS.PRODUCTS, JSON.stringify(INITIAL_PRODUCTS));
-              } catch {}
+              safeSetLocalCache(CACHE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
             } else {
               setProducts([]);
-              try {
-                localStorage.setItem(CACHE_KEYS.PRODUCTS, JSON.stringify([]));
-              } catch {}
+              safeSetLocalCache(CACHE_KEYS.PRODUCTS, []);
             }
           }
           setLoading(false);
@@ -292,9 +301,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             }));
             
             setHeroSlides(guaranteed);
-            try {
-              localStorage.setItem(CACHE_KEYS.HERO_SLIDES, JSON.stringify(guaranteed));
-            } catch {}
+            safeSetLocalCache(CACHE_KEYS.HERO_SLIDES, guaranteed);
           } else {
             // Seed initial 3 slides if first time
             const hasInitialized = localStorage.getItem('outfit_store_initialized');
@@ -307,9 +314,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 }
               });
               setHeroSlides(INITIAL_HERO_SLIDES);
-              try {
-                localStorage.setItem(CACHE_KEYS.HERO_SLIDES, JSON.stringify(INITIAL_HERO_SLIDES));
-              } catch {}
+              safeSetLocalCache(CACHE_KEYS.HERO_SLIDES, INITIAL_HERO_SLIDES);
             }
           }
         },
@@ -348,9 +353,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               deliveryFee: data.deliveryFee !== undefined ? Number(data.deliveryFee) : 150,
             };
             setBranding(loadedBranding);
-            try {
-              localStorage.setItem(CACHE_KEYS.BRANDING, JSON.stringify(loadedBranding));
-            } catch {}
+            safeSetLocalCache(CACHE_KEYS.BRANDING, loadedBranding);
           } else {
             setDoc(doc(db, 'settings', 'branding'), INITIAL_BRANDING).catch((err) => {
               console.warn('Auto-seed branding error:', err);
@@ -509,7 +512,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // Compress all images so the document stays ultra-lightweight and well within Firestore's 1MB limit
     const compressedImages = rawImages.length > 0
-      ? await Promise.all(rawImages.map((img) => compressDataUrlIfNeeded(img, 720, 0.68)))
+      ? await Promise.all(rawImages.map((img) => compressDataUrlIfNeeded(img, 560, 0.60)))
       : [fallbackImage];
 
     const numPrice = Number(product.price) >= 0 ? Number(product.price) : 0;
@@ -542,9 +545,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const idx = prev.findIndex((p) => p.id === pId);
       const next = idx >= 0 ? [...prev] : [payload, ...prev];
       if (idx >= 0) next[idx] = payload;
-      try {
-        localStorage.setItem(CACHE_KEYS.PRODUCTS, JSON.stringify(next));
-      } catch {}
+      safeSetLocalCache(CACHE_KEYS.PRODUCTS, next);
       return next;
     });
 
@@ -560,9 +561,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const deleteProduct = async (productId: string) => {
     setProducts((prev) => {
       const filtered = prev.filter((p) => p.id !== productId);
-      try {
-        localStorage.setItem(CACHE_KEYS.PRODUCTS, JSON.stringify(filtered));
-      } catch {}
+      safeSetLocalCache(CACHE_KEYS.PRODUCTS, filtered);
       return filtered;
     });
     try {
@@ -580,9 +579,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     setHeroSlides((prev) => {
       const next = prev.map((s) => (s.id === slide.id ? payload : s));
-      try {
-        localStorage.setItem(CACHE_KEYS.HERO_SLIDES, JSON.stringify(next));
-      } catch {}
+      safeSetLocalCache(CACHE_KEYS.HERO_SLIDES, next);
       return next;
     });
     try {
@@ -600,9 +597,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       updatedAt: new Date().toISOString(),
     };
     setBranding(payload);
-    try {
-      localStorage.setItem(CACHE_KEYS.BRANDING, JSON.stringify(payload));
-    } catch {}
+    safeSetLocalCache(CACHE_KEYS.BRANDING, payload);
     try {
       const sanitized = cleanFirestorePayload(payload);
       await setDoc(doc(db, 'settings', 'branding'), sanitized);

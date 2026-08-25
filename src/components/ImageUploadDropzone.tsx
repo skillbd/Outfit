@@ -65,7 +65,13 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
       if (multiple) {
         const processed = await processMultipleImageFiles(files);
         const newUrls = processed.map((p) => p.dataUrl);
-        const merged = [...images, ...newUrls].slice(0, maxFiles);
+        // If current images only has 1 fallback/preset placeholder image, replace it with user's uploads
+        const isOnlyPlaceholder = images.length === 1 && (
+          images[0].includes('unsplash.com') ||
+          images[0].includes('placeholder')
+        );
+        const baseList = isOnlyPlaceholder ? [] : images;
+        const merged = [...baseList, ...newUrls].slice(0, maxFiles);
         onChange(merged);
       } else {
         const file = Array.from(files)[0];
