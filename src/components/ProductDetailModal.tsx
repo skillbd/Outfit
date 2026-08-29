@@ -120,6 +120,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                 src={selectedImageUrl}
                 alt={product.name}
                 referrerPolicy="no-referrer"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800';
+                }}
                 className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
               />
 

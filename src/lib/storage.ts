@@ -1,11 +1,8 @@
-import { getStorage, ref, uploadBytes, getDownloadURL, uploadString } from 'firebase/storage';
-import { initializeApp } from 'firebase/app';
-import firebaseConfig from '../../firebase-applet-config.json';
+import { ref, uploadBytes, getDownloadURL, uploadString } from 'firebase/storage';
+import { storage } from './firebase';
 import { processImageFile } from '../utils/imageUtils';
 
-// Initialize Firebase App & Storage
-const app = initializeApp(firebaseConfig);
-export const storage = getStorage(app, firebaseConfig.storageBucket);
+export { storage };
 
 /**
  * Uploads a file to Firebase Storage.
@@ -65,3 +62,4 @@ export async function uploadDataUrlToStorage(
     return dataUrl;
   }
 }
+

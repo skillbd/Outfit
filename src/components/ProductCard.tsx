@@ -14,8 +14,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
   const [selectedColorIdx, setSelectedColorIdx] = useState(0);
   const [justAdded, setJustAdded] = useState(false);
 
-  const primaryImage = product.images?.[0] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800';
-  const secondaryImage = product.images?.[1] || primaryImage;
+  const [primaryImgError, setPrimaryImgError] = useState(false);
+  const [secondaryImgError, setSecondaryImgError] = useState(false);
+
+  const fallbackPlaceholder = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800';
+  const rawPrimary = product.images?.[0] || fallbackPlaceholder;
+  const rawSecondary = product.images?.[1] || rawPrimary;
+
+  const primaryImage = primaryImgError ? fallbackPlaceholder : rawPrimary;
+  const secondaryImage = secondaryImgError ? primaryImage : rawSecondary;
 
   const hasDiscount = Boolean(product.originalPrice && product.originalPrice > product.price);
   const discountPct = product.discountPercentage || (hasDiscount ? Math.round(((product.originalPrice! - product.price) / product.originalPrice!) * 100) : 0);
@@ -48,6 +55,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
           loading="lazy"
           decoding="async"
           referrerPolicy="no-referrer"
+          onError={() => {
+            if (isHovered) setSecondaryImgError(true);
+            else setPrimaryImgError(true);
+          }}
           className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
         />
 

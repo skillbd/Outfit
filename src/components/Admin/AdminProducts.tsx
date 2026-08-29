@@ -255,6 +255,9 @@ export const AdminProducts: React.FC = () => {
                             src={product.images?.[0] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100'}
                             alt={product.name}
                             referrerPolicy="no-referrer"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100';
+                            }}
                             className="w-12 h-14 object-cover bg-gray-100 rounded-lg border border-gray-200 shrink-0"
                           />
                           <div>

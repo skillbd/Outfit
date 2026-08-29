@@ -13,49 +13,6 @@ import { INITIAL_BRANDING, INITIAL_HERO_SLIDES, INITIAL_PRODUCTS } from '../lib/
 import { applyStoreFonts } from '../lib/fonts';
 import { compressDataUrlIfNeeded } from '../utils/imageUtils';
 
-const CACHE_KEYS = {
-  PRODUCTS: 'outfit_store_products_cache_v4',
-  HERO_SLIDES: 'outfit_store_hero_slides_cache_v4',
-  BRANDING: 'outfit_store_branding_cache_v4',
-};
-
-// Safe helper to read cached data from localStorage instantly (0ms load time)
-function getLocalCache<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(fallback)) {
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed as unknown as T;
-      }
-      return fallback;
-    }
-    if (parsed && typeof parsed === 'object') {
-      return { ...fallback, ...parsed };
-    }
-    return parsed;
-  } catch (e) {
-    console.warn(`Could not load cache for ${key}:`, e);
-    return fallback;
-  }
-}
-
-// Safe helper to persist data to localStorage with quota overflow protection
-function safeSetLocalCache<T>(key: string, data: T): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(data));
-  } catch (e) {
-    console.warn(`LocalStorage quota reached for ${key}. Clearing older caches...`, e);
-    try {
-      localStorage.removeItem('store_cart_items');
-      localStorage.setItem(key, JSON.stringify(data));
-    } catch {
-      // ignore if storage completely full
-    }
-  }
-}
-
 // Clean data to prevent Firestore "Unsupported field value: undefined" errors
 function cleanFirestorePayload<T>(obj: T): T {
   if (obj === null || obj === undefined) {
@@ -133,26 +90,11 @@ interface StoreContextType {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Initialize state directly from LocalStorage cache for instant 0ms render without showing demo version
-  const [products, setProducts] = useState<Product[]>(() => {
-    return getLocalCache<Product[]>(CACHE_KEYS.PRODUCTS, []);
-  });
-
-  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(() => {
-    return getLocalCache<HeroSlide[]>(CACHE_KEYS.HERO_SLIDES, []);
-  });
-
+  const [products, setProducts] = useState<Product[]>([]);
+  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(INITIAL_HERO_SLIDES);
   const [orders, setOrders] = useState<Order[]>([]);
-  
-  const [branding, setBranding] = useState<BrandingSettings>(() => {
-    return getLocalCache<BrandingSettings>(CACHE_KEYS.BRANDING, INITIAL_BRANDING);
-  });
-
-  // If we already have cached products or branding, we don't block the UI
-  const [loading, setLoading] = useState<boolean>(() => {
-    const cachedProds = localStorage.getItem(CACHE_KEYS.PRODUCTS);
-    return !cachedProds;
-  });
+  const [branding, setBranding] = useState<BrandingSettings>(INITIAL_BRANDING);
+  const [loading, setLoading] = useState<boolean>(true);
 
   // UI state
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -198,12 +140,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     applyStoreFonts(branding.fontFamily, branding.bodyFontFamily);
   }, [branding]);
 
-  // Firestore Real-time Listeners with Instant Local Caching
+  // Firestore Real-time Listeners
   useEffect(() => {
-    let unsubs: (() => void)[] = [];
+    const unsubs: (() => void)[] = [];
 
     try {
-      // 1. Products Listener
+      // 1. Products Real-time Listener (Single Source of Truth)
       const prodUnsub = onSnapshot(
         collection(db, 'products'),
         (snapshot) => {
@@ -212,49 +154,103 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             snapshot.forEach((docSnap) => {
               const d = docSnap.data();
               if (!d) return;
-              const prodName = String(d.name || '').trim() || 'Product';
-              const prodCat = String(d.category || '').trim() || 'Apparel';
+
+              // Handle product name & category
+              const prodName = String(d.name || d.title || '').trim() || 'Product';
+              const prodCat = String(d.category || d.cat || '').trim() || 'Apparel';
+              const prodDesc = String(d.description || d.desc || '');
+
+              // Handle price & original price
               const prodPrice = typeof d.price === 'number' ? d.price : parseFloat(String(d.price)) || 0;
-              const prodOrigPrice = d.originalPrice ? (typeof d.originalPrice === 'number' ? d.originalPrice : parseFloat(String(d.originalPrice))) : undefined;
-              const prodDiscount = d.discountPercentage ? Number(d.discountPercentage) : 0;
-              const prodStock = d.stock !== undefined ? Math.max(0, parseInt(String(d.stock), 10) || 0) : 10;
-              const prodImages = Array.isArray(d.images) && d.images.length > 0
-                ? d.images.filter((img: any) => typeof img === 'string' && img.trim().length > 0)
-                : ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800'];
+              const rawOrigPrice = d.originalPrice !== undefined ? d.originalPrice : (d.regularPrice !== undefined ? d.regularPrice : undefined);
+              const prodOrigPrice = rawOrigPrice !== undefined ? (typeof rawOrigPrice === 'number' ? rawOrigPrice : parseFloat(String(rawOrigPrice)) || undefined) : undefined;
               
+              // Discount
+              const rawDiscount = d.discountPercentage !== undefined ? d.discountPercentage : (d.discount !== undefined ? d.discount : 0);
+              const prodDiscount = Number(rawDiscount) || (prodOrigPrice && prodOrigPrice > prodPrice ? Math.round(((prodOrigPrice - prodPrice) / prodOrigPrice) * 100) : 0);
+              
+              // Stock
+              const rawStock = d.stock !== undefined ? d.stock : (d.quantity !== undefined ? d.quantity : 10);
+              const prodStock = Math.max(0, parseInt(String(rawStock), 10) || 0);
+
+              // Handle all image variations (images array, imageUrl, image, photo)
+              let prodImages: string[] = [];
+              if (Array.isArray(d.images) && d.images.length > 0) {
+                prodImages = d.images.filter((img: any) => typeof img === 'string' && img.trim().length > 0);
+              } else if (typeof d.imageUrl === 'string' && d.imageUrl.trim()) {
+                prodImages = [d.imageUrl.trim()];
+              } else if (typeof d.image === 'string' && d.image.trim()) {
+                prodImages = [d.image.trim()];
+              } else if (typeof d.photo === 'string' && d.photo.trim()) {
+                prodImages = [d.photo.trim()];
+              }
+              if (prodImages.length === 0) {
+                prodImages = ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800'];
+              }
+
+              // Sizes
+              let prodSizes: string[] = [];
+              if (Array.isArray(d.sizes)) {
+                prodSizes = d.sizes.map(String).filter(Boolean);
+              } else if (typeof d.sizes === 'string') {
+                prodSizes = d.sizes.split(',').map((s) => s.trim()).filter(Boolean);
+              }
+
+              // Colors
+              const prodColors = Array.isArray(d.colors) ? d.colors : [];
+
+              // Timestamps
+              let createdIso = new Date().toISOString();
+              if (d.createdAt && typeof d.createdAt === 'object' && typeof d.createdAt.toDate === 'function') {
+                createdIso = d.createdAt.toDate().toISOString();
+              } else if (typeof d.createdAt === 'string') {
+                createdIso = d.createdAt;
+              } else if (d.created_at && typeof d.created_at.toDate === 'function') {
+                createdIso = d.created_at.toDate().toISOString();
+              }
+
+              let updatedIso = new Date().toISOString();
+              if (d.updatedAt && typeof d.updatedAt === 'object' && typeof d.updatedAt.toDate === 'function') {
+                updatedIso = d.updatedAt.toDate().toISOString();
+              } else if (typeof d.updatedAt === 'string') {
+                updatedIso = d.updatedAt;
+              }
+
               list.push({
                 ...d,
                 id: docSnap.id,
                 name: prodName,
-                description: String(d.description || ''),
+                description: prodDesc,
                 category: prodCat,
                 price: prodPrice,
                 originalPrice: prodOrigPrice && prodOrigPrice > prodPrice ? prodOrigPrice : undefined,
                 discountPercentage: prodDiscount,
                 stock: prodStock,
-                images: prodImages.length > 0 ? prodImages : ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800'],
-                sizes: Array.isArray(d.sizes) ? d.sizes : [],
-                colors: Array.isArray(d.colors) ? d.colors : [],
+                images: prodImages,
+                sizes: prodSizes,
+                colors: prodColors,
                 featured: Boolean(d.featured),
-                rating: d.rating ? Number(d.rating) : 5.0,
-                reviewCount: d.reviewCount ? Number(d.reviewCount) : 1,
+                rating: d.rating !== undefined ? Number(d.rating) || 5.0 : 5.0,
+                reviewCount: d.reviewCount !== undefined ? Number(d.reviewCount) || 1 : 1,
                 badge: d.badge ? String(d.badge).trim() : undefined,
-                createdAt: d.createdAt || new Date().toISOString(),
-                updatedAt: d.updatedAt || new Date().toISOString(),
+                createdAt: createdIso,
+                updatedAt: updatedIso,
               } as Product);
             });
-            // Sort by createdAt descending so newly added products appear first
+
+            // Sort by createdAt descending (newest first)
             list.sort((a, b) => {
               const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
               const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
               return timeB - timeA;
             });
+
             setProducts(list);
-            safeSetLocalCache(CACHE_KEYS.PRODUCTS, list);
           } else {
-            // First time setup only if database is brand new
-            const hasInitialized = localStorage.getItem('outfit_store_initialized');
-            if (!hasInitialized) {
+            // First time setup if database has zero products: seed catalog directly into Firestore
+            const autoSeedDone = localStorage.getItem('outfit_store_autoseeded');
+            if (!autoSeedDone) {
+              localStorage.setItem('outfit_store_autoseeded', 'true');
               INITIAL_PRODUCTS.forEach(async (p) => {
                 try {
                   await setDoc(doc(db, 'products', p.id), cleanFirestorePayload(p));
@@ -263,23 +259,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 }
               });
               setProducts(INITIAL_PRODUCTS);
-              localStorage.setItem('outfit_store_initialized', 'true');
-              safeSetLocalCache(CACHE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
             } else {
               setProducts([]);
-              safeSetLocalCache(CACHE_KEYS.PRODUCTS, []);
             }
           }
           setLoading(false);
         },
         (error) => {
-          console.warn('Products sync warning (using cached data):', error.message);
+          console.error('Firestore products onSnapshot error:', error);
           setLoading(false);
         }
       );
       unsubs.push(prodUnsub);
 
-      // 2. Hero Slides Listener (Always guarantee exactly 3 slides)
+      // 2. Hero Slides Listener
       const heroUnsub = onSnapshot(
         collection(db, 'heroSlides'),
         (snapshot) => {
@@ -301,25 +294,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             }));
             
             setHeroSlides(guaranteed);
-            safeSetLocalCache(CACHE_KEYS.HERO_SLIDES, guaranteed);
           } else {
-            // Seed initial 3 slides if first time
-            const hasInitialized = localStorage.getItem('outfit_store_initialized');
-            if (!hasInitialized) {
-              INITIAL_HERO_SLIDES.forEach(async (slide) => {
-                try {
-                  await setDoc(doc(db, 'heroSlides', slide.id), cleanFirestorePayload(slide));
-                } catch (err) {
-                  console.warn('Auto-seed hero slide error:', err);
-                }
-              });
-              setHeroSlides(INITIAL_HERO_SLIDES);
-              safeSetLocalCache(CACHE_KEYS.HERO_SLIDES, INITIAL_HERO_SLIDES);
-            }
+            INITIAL_HERO_SLIDES.forEach(async (slide) => {
+              try {
+                await setDoc(doc(db, 'heroSlides', slide.id), cleanFirestorePayload(slide));
+              } catch (err) {
+                console.warn('Auto-seed hero slide error:', err);
+              }
+            });
+            setHeroSlides(INITIAL_HERO_SLIDES);
           }
         },
         (error) => {
-          console.warn('Hero slides sync warning:', error.message);
+          console.warn('Hero slides sync error:', error.message);
         }
       );
       unsubs.push(heroUnsub);
@@ -336,7 +323,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setOrders(list);
         },
         (error) => {
-          console.warn('Orders sync warning:', error.message);
+          console.warn('Orders sync error:', error.message);
         }
       );
       unsubs.push(ordersUnsub);
@@ -353,7 +340,21 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               deliveryFee: data.deliveryFee !== undefined ? Number(data.deliveryFee) : 150,
             };
             setBranding(loadedBranding);
-            safeSetLocalCache(CACHE_KEYS.BRANDING, loadedBranding);
+            if (loadedBranding.fontFamily && loadedBranding.bodyFontFamily) {
+              applyStoreFonts(loadedBranding.fontFamily, loadedBranding.bodyFontFamily);
+            }
+            if (loadedBranding.websiteTitle) {
+              document.title = loadedBranding.websiteTitle;
+            }
+            if (loadedBranding.faviconUrl) {
+              let link: HTMLLinkElement | null = document.querySelector("link[rel~='icon']");
+              if (!link) {
+                link = document.createElement('link');
+                link.rel = 'icon';
+                document.getElementsByTagName('head')[0].appendChild(link);
+              }
+              link.href = loadedBranding.faviconUrl;
+            }
           } else {
             setDoc(doc(db, 'settings', 'branding'), INITIAL_BRANDING).catch((err) => {
               console.warn('Auto-seed branding error:', err);
@@ -361,7 +362,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           }
         },
         (error) => {
-          console.warn('Branding sync warning:', error.message);
+          console.warn('Branding sync error:', error.message);
         }
       );
       unsubs.push(brandingUnsub);
@@ -540,15 +541,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       createdAt: product.createdAt || new Date().toISOString(),
     };
 
-    // Optimistically update local state immediately
-    setProducts((prev) => {
-      const idx = prev.findIndex((p) => p.id === pId);
-      const next = idx >= 0 ? [...prev] : [payload, ...prev];
-      if (idx >= 0) next[idx] = payload;
-      safeSetLocalCache(CACHE_KEYS.PRODUCTS, next);
-      return next;
-    });
-
     try {
       const sanitized = cleanFirestorePayload(payload);
       await setDoc(doc(db, 'products', pId), sanitized);
@@ -559,11 +551,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const deleteProduct = async (productId: string) => {
-    setProducts((prev) => {
-      const filtered = prev.filter((p) => p.id !== productId);
-      safeSetLocalCache(CACHE_KEYS.PRODUCTS, filtered);
-      return filtered;
-    });
     try {
       await deleteDoc(doc(db, 'products', productId));
     } catch (error) {
@@ -577,11 +564,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ...slide,
       updatedAt: new Date().toISOString(),
     };
-    setHeroSlides((prev) => {
-      const next = prev.map((s) => (s.id === slide.id ? payload : s));
-      safeSetLocalCache(CACHE_KEYS.HERO_SLIDES, next);
-      return next;
-    });
     try {
       const sanitized = cleanFirestorePayload(payload);
       await setDoc(doc(db, 'heroSlides', slide.id), sanitized);
@@ -597,10 +579,24 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       updatedAt: new Date().toISOString(),
     };
     setBranding(payload);
-    safeSetLocalCache(CACHE_KEYS.BRANDING, payload);
+    if (payload.fontFamily && payload.bodyFontFamily) {
+      applyStoreFonts(payload.fontFamily, payload.bodyFontFamily);
+    }
+    if (payload.websiteTitle) {
+      document.title = payload.websiteTitle;
+    }
+    if (payload.faviconUrl) {
+      let link: HTMLLinkElement | null = document.querySelector("link[rel~='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.getElementsByTagName('head')[0].appendChild(link);
+      }
+      link.href = payload.faviconUrl;
+    }
     try {
       const sanitized = cleanFirestorePayload(payload);
-      await setDoc(doc(db, 'settings', 'branding'), sanitized);
+      await setDoc(doc(db, 'settings', 'branding'), sanitized, { merge: true });
     } catch (error) {
       console.warn('Firestore saveBranding write warning:', error);
     }

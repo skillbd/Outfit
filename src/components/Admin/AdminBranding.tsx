@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Save, CheckCircle, Sparkles, Globe, CreditCard, Type, Check, Wand2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Save, CheckCircle, Sparkles, Globe, CreditCard, Type, Check, Wand2, Image as ImageIcon, RotateCcw } from 'lucide-react';
 import { BrandingSettings } from '../../types';
 import { useStore } from '../../context/StoreContext';
 import { ImageUploadDropzone } from '../ImageUploadDropzone';
@@ -21,6 +21,20 @@ export const AdminBranding: React.FC = () => {
   });
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  // Sync state when branding updates from Firestore
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...branding,
+      ...prev,
+      // If user hasn't modified logoUrl locally, sync from store
+      logoUrl: prev.logoUrl !== undefined ? prev.logoUrl : branding.logoUrl,
+      websiteName: prev.websiteName || branding.websiteName,
+      currency: prev.currency || branding.currency,
+      fontFamily: prev.fontFamily || branding.fontFamily || 'Cormorant Garamond',
+      bodyFontFamily: prev.bodyFontFamily || branding.bodyFontFamily || 'Plus Jakarta Sans',
+    }));
+  }, [branding]);
 
   // Live preview font changes immediately as the admin changes them in the form
   const handleHeadingFontChange = (fontId: string) => {
@@ -45,8 +59,8 @@ export const AdminBranding: React.FC = () => {
     applyStoreFonts(next.fontFamily, next.bodyFontFamily);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setIsSaving(true);
     try {
       await updateBranding(formData);
@@ -61,8 +75,15 @@ export const AdminBranding: React.FC = () => {
     }
   };
 
-  const handleLogoUpload = (images: string[]) => {
-    setFormData({ ...formData, logoUrl: images[0] || '' });
+  const handleLogoUpload = async (images: string[]) => {
+    const nextLogo = images[0] || '';
+    const updated = { ...formData, logoUrl: nextLogo };
+    setFormData(updated);
+  };
+
+  const handleClearLogo = () => {
+    const updated = { ...formData, logoUrl: '' };
+    setFormData(updated);
   };
 
   const handleFaviconUpload = (images: string[]) => {
@@ -304,14 +325,58 @@ export const AdminBranding: React.FC = () => {
 
           {/* Store Logo Upload Dropzone & Sizing Options */}
           <div className="pt-3 border-t border-gray-100 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="block font-bold text-gray-800 uppercase tracking-wide text-[11px]">
+                  Storefront Logo (লোগো পরিবর্তন)
+                </label>
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  Upload image or paste image URL. Click 'Save Settings' or 'Save Logo Now' to update.
+                </p>
+              </div>
+              {formData.logoUrl && (
+                <button
+                  type="button"
+                  onClick={handleClearLogo}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded-md transition-colors cursor-pointer border border-rose-200"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Reset to Default Logo</span>
+                </button>
+              )}
+            </div>
+
             <ImageUploadDropzone
-              label="Storefront Logo (Firebase Storage / URL)"
-              description="Upload high-res PNG, WebP, or SVG logo. Leave empty to use the default 'Outfit' luxury typographic logo."
+              label=""
+              description="Upload high-res PNG, WebP, or SVG logo. Supports file drag & drop, file browse, or direct URL."
               images={formData.logoUrl ? [formData.logoUrl] : []}
               onChange={handleLogoUpload}
               multiple={false}
               aspectRatio="square"
             />
+
+            {/* Quick Action Bar for Logo */}
+            <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-200">
+              <div className="text-[11px] text-gray-600">
+                {formData.logoUrl ? (
+                  <span className="text-emerald-700 font-semibold flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    Custom logo image loaded
+                  </span>
+                ) : (
+                  <span className="text-gray-500">Using default brand logo</span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => handleSubmit()}
+                disabled={isSaving}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#111111] hover:bg-gray-800 text-[#FACC15] font-bold rounded-lg transition-colors disabled:opacity-50 cursor-pointer text-xs shadow-xs"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>{isSaving ? 'Saving...' : 'Save Logo Now'}</span>
+              </button>
+            </div>
 
             {/* Logo Size & Height Adjustment Controls */}
             <div className="p-4 bg-amber-50/50 border border-amber-200/80 rounded-xl space-y-4">

@@ -1,4 +1,4 @@
-import { initializeApp, getApps } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
   getAuth,
   GoogleAuthProvider,
@@ -8,44 +8,66 @@ import {
 } from 'firebase/auth';
 import {
   getFirestore,
-  initializeFirestore,
-  memoryLocalCache,
   doc,
-  getDocFromServer,
+  getDoc,
   Firestore,
 } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import defaultConfig from '../../firebase-applet-config.json';
 
+// Support standard Vite environment variables and common Netlify naming conventions with fallback to bundled config
 const firebaseConfig = {
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || defaultConfig.projectId,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || defaultConfig.appId,
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || defaultConfig.apiKey,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || defaultConfig.authDomain,
-  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || defaultConfig.firestoreDatabaseId,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || defaultConfig.storageBucket,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || defaultConfig.messagingSenderId,
+  projectId:
+    import.meta.env.VITE_FIREBASE_PROJECT_ID ||
+    import.meta.env.VITE_FIREBASE_PROJECTID ||
+    defaultConfig.projectId,
+  appId:
+    import.meta.env.VITE_FIREBASE_APP_ID ||
+    import.meta.env.VITE_FIREBASE_APPID ||
+    defaultConfig.appId,
+  apiKey:
+    import.meta.env.VITE_FIREBASE_API_KEY ||
+    import.meta.env.VITE_FIREBASE_APIKEY ||
+    defaultConfig.apiKey,
+  authDomain:
+    import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ||
+    import.meta.env.VITE_FIREBASE_AUTHDOMAIN ||
+    defaultConfig.authDomain,
+  firestoreDatabaseId:
+    import.meta.env.VITE_FIREBASE_DATABASE_ID ||
+    import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID ||
+    import.meta.env.VITE_FIREBASE_DATABASEID ||
+    defaultConfig.firestoreDatabaseId,
+  storageBucket:
+    import.meta.env.VITE_FIREBASE_STORAGE_BUCKET ||
+    import.meta.env.VITE_FIREBASE_STORAGEBUCKET ||
+    defaultConfig.storageBucket,
+  messagingSenderId:
+    import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID ||
+    import.meta.env.VITE_FIREBASE_MESSAGINGSENDERID ||
+    defaultConfig.messagingSenderId,
 };
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Initialize Firestore with memory cache to prevent IndexedDB tab-closing / hidden document abort errors
+const dbId =
+  firebaseConfig.firestoreDatabaseId &&
+  firebaseConfig.firestoreDatabaseId.trim() !== '' &&
+  firebaseConfig.firestoreDatabaseId !== '(default)'
+    ? firebaseConfig.firestoreDatabaseId.trim()
+    : undefined;
+
 let dbInstance: Firestore;
 try {
-  dbInstance = initializeFirestore(
-    app,
-    {
-      localCache: memoryLocalCache(),
-    },
-    firebaseConfig.firestoreDatabaseId
-  );
-} catch {
-  dbInstance = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+  dbInstance = dbId ? getFirestore(app, dbId) : getFirestore(app);
+} catch (error) {
+  console.warn('Named Firestore initialization warning, falling back to default:', error);
+  dbInstance = getFirestore(app);
 }
 
 export const db = dbInstance;
 export const auth = getAuth(app);
-export const storage = getStorage(app);
+export const storage = getStorage(app, firebaseConfig.storageBucket);
 export const googleProvider = new GoogleAuthProvider();
 
 export { signInWithEmailAndPassword, signInWithPopup, fbSignOut };
@@ -100,7 +122,8 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 
 export async function testFirestoreConnection() {
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
+    const testDocRef = doc(db, 'products', '__ping__');
+    await getDoc(testDocRef);
   } catch (error: unknown) {
     if (error instanceof Error && error.message.includes('the client is offline')) {
       console.warn('Firestore is running in offline or cached mode:', error.message);
@@ -108,6 +131,7 @@ export async function testFirestoreConnection() {
   }
 }
 
-// Test connection on startup safely
+// Background test connection safely
 testFirestoreConnection().catch(() => {});
+
 

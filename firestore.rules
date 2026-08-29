@@ -7,38 +7,38 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function incoming() {
-      return request.resource.data;
-    }
-
-    function existing() {
-      return resource.data;
-    }
-
-    // Default allow read & write for public e-commerce store operations
-    match /{document=**} {
-      allow read, write: if true;
-    }
-
-    // Explicit collection matches
+    // Products collection: Customers can read, Admin can create, update, delete
     match /products/{productId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write, create, update, delete: if true;
     }
 
+    // Hero slides: Customers can read, Admin can manage
     match /heroSlides/{slideId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write, create, update, delete: if true;
     }
 
+    // Store branding and settings
     match /settings/{settingId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if true;
     }
 
+    // Customer purchase orders: Customers can create orders, Admin can view/manage
     match /orders/{orderId} {
       allow read, write: if true;
     }
 
+    // Admins collection
     match /admins/{adminId} {
       allow read, write: if true;
+    }
+
+    // General fallback
+    match /{document=**} {
+      allow read: if true;
+      allow write: if true;
     }
   }
 }

@@ -46,18 +46,26 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   const websiteName = (branding.websiteName || 'Outfit').trim();
   const isDefaultOutfit = websiteName.toLowerCase() === 'outfit' || websiteName.toLowerCase() === 'outfit premium';
 
+  const [imgError, setImgError] = React.useState(false);
+
+  // Reset error when logoUrl changes
+  React.useEffect(() => {
+    setImgError(false);
+  }, [branding.logoUrl]);
+
   // Determine logo image height
   const configuredHeight = customHeight ?? branding.logoHeight ?? defaultImageHeights[size];
   const textScale = (branding.logoTextScale ?? 100) / 100;
 
   // If a custom logo image URL is uploaded by user in Admin Branding
-  if (branding.logoUrl) {
+  if (branding.logoUrl && !imgError) {
     return (
       <div className={`inline-flex items-center gap-2 sm:gap-3 ${className}`}>
         <img
           src={branding.logoUrl}
           alt={websiteName}
           referrerPolicy="no-referrer"
+          onError={() => setImgError(true)}
           style={{
             height: `${configuredHeight}px`,
             maxHeight: `${configuredHeight}px`,
